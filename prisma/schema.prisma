@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PlanCategory {
+  CREDIT_PACK
+  SERVICE_PLAN
+  SUBSCRIPTION_PLAN
+}
+
+enum CreditTransactionType {
+  RECHARGE
+  PURCHASE
+  MANUAL_ADJUST
+}
+
+enum RechargeOrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELED
+}
+
+enum OrderType {
+  SERVICE_PURCHASE
+  SUBSCRIPTION_PURCHASE
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  ACTIVE
+  COMPLETED
+  CANCELED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+enum ServiceTaskType {
+  FOLLOW
+  LIKE
+  REPOST
+  COMMENT
+  BOOKMARK
+  QUOTE
+}
+
+enum ServiceTaskStatus {
+  DRAFT
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  privyUserId        String              @unique
+  email              String?             @unique
+  name               String?
+  avatarUrl          String?
+  role               Role                @default(USER)
+  creditBalance      Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  rechargeOrders     RechargeOrder[]
+  orders             Order[]
+  subscriptions      Subscription[]
+  creditTransactions CreditTransaction[]
+  serviceTasks       ServiceTask[]
+}
+
+model Plan {
+  id             String          @id @default(cuid())
+  slug           String          @unique
+  name           String
+  description    String
+  category       PlanCategory
+  priceUsd       Int
+  creditsGranted Int?
+  creditsCost    Int?
+  durationDays   Int?
+  isFeatured     Boolean         @default(false)
+  isActive       Boolean         @default(true)
+  meta           Json?
+  features       Json
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  orders         Order[]
+  subscriptions  Subscription[]
+}
+
+model RechargeOrder {
+  id           String              @id @default(cuid())
+  userId       String
+  credits      Int
+  amountUsd    Int
+  status       RechargeOrderStatus @default(PENDING)
+  provider     String?
+  providerRef  String?
+  metadata     Json?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  paidAt       DateTime?
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+model CreditTransaction {
+  id           String                @id @default(cuid())
+  userId       String
+  type         CreditTransactionType
+  amount       Int
+  balanceAfter Int
+  description  String
+  referenceId  String?
+  metadata     Json?
+  createdAt    DateTime              @default(now())
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  planId      String
+  type        OrderType
+  status      OrderStatus @default(PENDING)
+  amountUsd   Int
+  creditsCost Int
+  progress    Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  completedAt DateTime?
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan        Plan        @relation(fields: [planId], references: [id])
+  tasks       ServiceTask[]
+
+  @@index([userId, status])
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  userId    String
+  planId    String
+  status    SubscriptionStatus @default(ACTIVE)
+  startAt   DateTime           @default(now())
+  endAt     DateTime
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan      Plan               @relation(fields: [planId], references: [id])
+
+  @@index([userId, status])
+}
+
+model ServiceTask {
+  id             String            @id @default(cuid())
+  userId         String
+  orderId        String?
+  type           ServiceTaskType
+  status         ServiceTaskStatus @default(DRAFT)
+  targetAccount  String
+  targetPostUrl  String?
+  note           String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order          Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+}
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String
+  action      String
+  targetType  String
+  targetId    String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
