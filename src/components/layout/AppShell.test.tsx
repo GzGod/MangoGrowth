@@ -19,3 +19,13 @@ test('shows the primary navigation labels', () => {
   expect(within(navigation).getByText('账单')).toBeInTheDocument()
   expect(within(navigation).getByText('套餐 & 订阅')).toBeInTheDocument()
 })
+
+test('shows the MangoGrowth brand in the shell', () => {
+  render(
+    <MemoryRouter>
+      <AppShell />
+    </MemoryRouter>,
+  )
+
+  expect(screen.getByText('MangoGrowth')).toBeInTheDocument()
+})

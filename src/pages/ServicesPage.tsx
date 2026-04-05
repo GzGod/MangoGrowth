@@ -11,7 +11,7 @@ function ServicesPage() {
 
       <section className="hero-copy">
         <h2>创建增长任务</h2>
-        <p>选择你需要的增长动作，SpreadX 用真实的加密用户帮你执行。</p>
+        <p>选择你需要的增长动作，MangoGrowth 用真实的加密用户帮你执行。</p>
       </section>
 
       <section className="grid-three">

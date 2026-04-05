@@ -1,6 +1,6 @@
-# GrowthX Clone
+# MangoGrowth
 
-High-fidelity frontend prototype for the provided GrowthX-style dashboard product shell.
+High-fidelity frontend prototype for the provided MangoGrowth dashboard product shell.
 
 ## Stack
 

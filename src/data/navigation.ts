@@ -28,8 +28,8 @@ export const primaryNavigation: NavigationItem[] = [
 export const secondaryNavigation = [{ label: '设置', path: '/settings', icon: Settings }]
 
 export const appIdentity = {
-  name: 'GrowthX',
-  tagline: 'Powered by SpreadX AI',
+  name: 'MangoGrowth',
+  tagline: 'Powered by MangoGrowth',
   balanceLabel: '积分余额',
   balanceValue: '5,050',
   inviteLabel: '邀请赚积分',

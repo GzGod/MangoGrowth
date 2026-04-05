@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 
 export const servicesNotice =
-  'SpreadX 的所有增长行为，都由真实的加密用户执行，AI 只负责协调，而不是造假。'
+  'MangoGrowth 的所有增长行为，都由真实的加密用户执行，AI 只负责协调，而不是造假。'
 
 export const serviceCards = [
   {
