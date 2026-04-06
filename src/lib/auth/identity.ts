@@ -23,6 +23,33 @@ function truncateWalletAddress(value: string) {
   return `${value.slice(0, 6)}...${value.slice(-4)}`
 }
 
+export function getPrivyLinkedAccounts(privyUser: MaybePrivyUser | null | undefined) {
+  return privyUser?.linkedAccounts ?? privyUser?.linked_accounts ?? []
+}
+
+export function extractPrivyEmail(privyUser: MaybePrivyUser | null | undefined) {
+  const directEmail = privyUser?.email?.address?.trim().toLowerCase()
+  if (directEmail) {
+    return directEmail
+  }
+
+  const linkedAccounts = getPrivyLinkedAccounts(privyUser)
+  const accountWithEmail = linkedAccounts.find((account) => {
+    const email = account.email?.trim()
+    const address = account.address?.trim()
+    return Boolean(email) || Boolean(address && address.includes('@'))
+  })
+
+  const candidate = accountWithEmail?.email?.trim() ?? accountWithEmail?.address?.trim() ?? null
+  return candidate ? candidate.toLowerCase() : null
+}
+
+export function extractPrivyWalletAddress(privyUser: MaybePrivyUser | null | undefined) {
+  const linkedAccounts = getPrivyLinkedAccounts(privyUser)
+  return linkedAccounts.find((account) => typeof account.address === 'string' && account.address.trim().length > 0 && !account.address.includes('@'))
+    ?.address?.trim() ?? null
+}
+
 export function extractPrivyIdentity(privyUser: MaybePrivyUser | null | undefined) {
   if (!privyUser) {
     return {
@@ -31,13 +58,9 @@ export function extractPrivyIdentity(privyUser: MaybePrivyUser | null | undefine
     }
   }
 
-  const linkedAccounts = privyUser.linkedAccounts ?? privyUser.linked_accounts ?? []
-  const email = privyUser.email?.address?.toLowerCase() ?? linkedAccounts.find((account) => account.type === 'email')?.email ?? null
-  const walletAddress = linkedAccounts.find((account) => typeof account.address === 'string' && account.address.trim().length > 0)?.address ?? null
-
   return {
-    email,
-    walletAddress,
+    email: extractPrivyEmail(privyUser),
+    walletAddress: extractPrivyWalletAddress(privyUser),
   }
 }
 

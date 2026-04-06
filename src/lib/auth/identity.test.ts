@@ -17,6 +17,20 @@ describe('extractPrivyIdentity', () => {
       walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
     })
   })
+
+  it('falls back to any linked account email for oauth-style identities', () => {
+    const identity = extractPrivyIdentity({
+      linkedAccounts: [
+        { type: 'google_oauth', email: 'oauth-admin@example.com' },
+        { type: 'wallet', address: '0x1234567890abcdef1234567890abcdef12345678' },
+      ],
+    })
+
+    expect(identity).toEqual({
+      email: 'oauth-admin@example.com',
+      walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
+    })
+  })
 })
 
 describe('resolveDisplayIdentity', () => {

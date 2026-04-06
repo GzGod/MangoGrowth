@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getBootstrapAdminEmails } from '@/lib/env'
 import { isBootstrapAdmin, parseBootstrapAdminEmails } from '@/lib/auth/admin'
+import { extractPrivyEmail, extractPrivyWalletAddress } from '@/lib/auth/identity'
 import { getPrivyClient } from '@/lib/privy'
 
 type PrivyLinkedAccount = {
@@ -41,22 +42,6 @@ function extractIdentityToken(request: Request) {
   return request.headers.get('x-privy-token')
 }
 
-function extractEmail(privyUser: PrivyUserShape) {
-  if (privyUser.email?.address) {
-    return privyUser.email.address.toLowerCase()
-  }
-
-  const linkedAccounts = privyUser.linkedAccounts ?? privyUser.linked_accounts ?? []
-  const emailAccount = linkedAccounts.find((account) => account.type === 'email')
-  return emailAccount?.address?.toLowerCase() ?? emailAccount?.email?.toLowerCase() ?? null
-}
-
-function extractWalletAddress(privyUser: PrivyUserShape) {
-  const linkedAccounts = privyUser.linkedAccounts ?? privyUser.linked_accounts ?? []
-  const walletAccount = linkedAccounts.find((account) => typeof account.address === 'string' && account.address.trim().length > 0)
-  return walletAccount?.address?.trim() ?? null
-}
-
 function extractName(privyUser: PrivyUserShape) {
   const metadata = privyUser.customMetadata ?? privyUser.custom_metadata ?? {}
   const nameValue = metadata.name
@@ -77,8 +62,8 @@ export async function requireSessionUser(request: Request): Promise<SessionUser>
   }
 
   const privyUser = (await getPrivyClient().getUser({ idToken: identityToken })) as unknown as PrivyUserShape
-  const email = extractEmail(privyUser)
-  const walletAddress = extractWalletAddress(privyUser)
+  const email = extractPrivyEmail(privyUser)
+  const walletAddress = extractPrivyWalletAddress(privyUser)
   const bootstrapAdminEmails = parseBootstrapAdminEmails(getBootstrapAdminEmails())
   const role: 'USER' | 'ADMIN' = isBootstrapAdmin(email, bootstrapAdminEmails) ? 'ADMIN' : 'USER'
 
