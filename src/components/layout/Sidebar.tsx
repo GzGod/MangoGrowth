@@ -32,7 +32,7 @@ const navigation = [
   { href: '/account-growth', label: '账户增长', icon: TrendingUp },
   { href: '/orders', label: '订单', icon: CalendarDays },
   { href: '/billing', label: '账单', icon: CreditCard },
-  { href: '/plans', label: '套餐与订阅', icon: Layers3 },
+  { href: '/plans', label: '套餐 & 订阅', icon: Layers3 },
 ]
 
 const titleMap: Record<string, string> = {
@@ -41,7 +41,7 @@ const titleMap: Record<string, string> = {
   '/account-growth': '账户增长',
   '/orders': '订单',
   '/billing': '账单',
-  '/plans': '套餐与订阅',
+  '/plans': '套餐 & 订阅',
   '/admin': '管理后台',
 }
 
@@ -53,11 +53,11 @@ function Brand() {
   return (
     <div className="sidebar__brand">
       <div className="sidebar__brand-mark" aria-hidden="true">
-        <Zap size={18} strokeWidth={2.2} />
+        <Zap size={16} strokeWidth={2.2} />
       </div>
       <div className="sidebar__brand-copy">
         <div className="sidebar__brand-title">MangoGrowth</div>
-        <div className="sidebar__brand-tagline">现代增长控制台</div>
+        <div className="sidebar__brand-tagline">Powered by MangoGrowth</div>
       </div>
     </div>
   )
@@ -72,7 +72,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
         const isActive = pathname === href
         return (
           <Link key={href} href={href} className={`sidebar__link${isActive ? ' is-active' : ''}`} onClick={onNavigate}>
-            <Icon size={18} />
+            <Icon size={16} />
             <span>{label}</span>
           </Link>
         )
@@ -88,12 +88,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [settingsPanel, setSettingsPanel] = useState<SettingsPanel>('root')
   const [theme, setTheme] = useState<ThemeMode>(() => {
-    if (typeof window === 'undefined') return 'light'
+    if (typeof window === 'undefined') {
+      return 'light'
+    }
+
     const storedTheme = window.localStorage.getItem('mango-theme')
     return storedTheme === 'dark' ? 'dark' : 'light'
   })
   const [language, setLanguage] = useState<LanguageMode>(() => {
-    if (typeof window === 'undefined') return 'zh-CN'
+    if (typeof window === 'undefined') {
+      return 'zh-CN'
+    }
+
     const storedLanguage = window.localStorage.getItem('mango-language')
     return storedLanguage === 'en' ? 'en' : 'zh-CN'
   })
@@ -119,7 +125,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [language])
 
   useEffect(() => {
-    if (!isSettingsOpen) return
+    if (!isSettingsOpen) {
+      return
+    }
 
     const handlePointerDown = (event: MouseEvent) => {
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
@@ -162,7 +170,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <NavItems />
           {user?.role === 'ADMIN' ? (
             <Link href="/admin" className={`sidebar__link${pathname === '/admin' ? ' is-active' : ''}`}>
-              <Shield size={18} />
+              <Shield size={16} />
               <span>管理后台</span>
             </Link>
           ) : null}
@@ -171,12 +179,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="sidebar__footer">
           <div className="sidebar__invite-card">
             <span className="sidebar__invite-icon">
-              <Wallet size={15} />
+              <Wallet size={14} />
             </span>
-            <div className="sidebar__invite-copy">
-              <strong>邀请赚积分</strong>
-              <span>邀请好友加入，持续获得奖励</span>
-            </div>
+            <span>邀请赚积分</span>
           </div>
 
           <div className="sidebar__balance">
@@ -197,7 +202,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => {
                   setIsSettingsOpen((current) => {
                     const next = !current
-                    if (!next) setSettingsPanel('root')
+                    if (!next) {
+                      setSettingsPanel('root')
+                    }
                     return next
                   })
                 }}
@@ -337,7 +344,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className={`sidebar__link${pathname === '/admin' ? ' is-active' : ''}`}
                   onClick={() => setIsDrawerOpen(false)}
                 >
-                  <Shield size={18} />
+                  <Shield size={16} />
                   <span>管理后台</span>
                 </Link>
               ) : null}
