@@ -47,8 +47,8 @@ export default function BillingPage() {
 
   return (
     <div className="page-stack page-stack--billing">
-      <div className="grid-three billing-top-grid">
-        <Panel className="profile-card">
+      <div className="grid-three billing-top-grid page-metrics-grid">
+        <Panel className="profile-card profile-card--spotlight">
           <span className="profile-card__label">我的资料</span>
           <div className="profile-card__row">
             <div>
@@ -60,15 +60,16 @@ export default function BillingPage() {
             </div>
           </div>
         </Panel>
-        <StatCard label="我的积分" value={data?.metrics.balance.toLocaleString() ?? '0'} icon={CircleDollarSign} />
-        <StatCard label="花费积分总数" value={data?.metrics.spentCredits.toLocaleString() ?? '0'} icon={WalletCards} />
+        <StatCard label="我的积分" value={data?.metrics.balance.toLocaleString() ?? '0'} icon={CircleDollarSign} className="metric-card--spotlight" />
+        <StatCard label="花费积分总数" value={data?.metrics.spentCredits.toLocaleString() ?? '0'} icon={WalletCards} className="metric-card--spotlight" />
       </div>
 
       <section>
         <div className="section-title">套餐配额</div>
         <EmptyState
+          eyebrow="账单中心"
           title="当前没有额外配额面板"
-          description="这里保留给后续支付回执、发票和账单周期统计。"
+          description="这里保留给后续支付回执、发票和账单周期统计，购买套餐后会逐步补齐。"
           action={
             <Link href="/plans">
               <PrimaryButton>购买套餐</PrimaryButton>
@@ -107,17 +108,29 @@ export default function BillingPage() {
               <p>展示最近的充值订单和支付状态。</p>
             </div>
           </div>
-          <TableShell
-            columns={['订单 ID', '积分', '金额', '状态', '创建时间']}
-            rows={(data?.rechargeOrders ?? []).map((order) => [
-              order.id,
-              order.credits.toLocaleString(),
-              `$${order.amountUsd}`,
-              <StatusPill key={`${order.id}-status`}>{order.status}</StatusPill>,
-              new Date(order.createdAt).toLocaleString('zh-CN'),
-            ])}
-            emptyText="还没有充值订单。"
-          />
+          {(data?.rechargeOrders?.length ?? 0) > 0 ? (
+            <TableShell
+              columns={['订单 ID', '积分', '金额', '状态', '创建时间']}
+              rows={(data?.rechargeOrders ?? []).map((order) => [
+                order.id,
+                order.credits.toLocaleString(),
+                `$${order.amountUsd}`,
+                <StatusPill key={`${order.id}-status`}>{order.status}</StatusPill>,
+                new Date(order.createdAt).toLocaleString('zh-CN'),
+              ])}
+            />
+          ) : (
+            <EmptyState
+              eyebrow="充值订单"
+              title="还没有任何充值订单哦～"
+              description="创建第一笔充值订单后，这里会自动展示金额、积分和支付状态。"
+              action={
+                <Link href="/plans">
+                  <PrimaryButton>立即购买套餐</PrimaryButton>
+                </Link>
+              }
+            />
+          )}
         </Panel>
 
         <Panel>
@@ -127,18 +140,30 @@ export default function BillingPage() {
               <p>记录充值、购买套餐和后续人工调整。</p>
             </div>
           </div>
-          <TableShell
-            columns={['流水 ID', '类型', '变动', '余额', '说明', '时间']}
-            rows={(data?.transactions ?? []).map((transaction) => [
-              transaction.id,
-              transaction.type,
-              transaction.amount > 0 ? `+${transaction.amount}` : transaction.amount,
-              transaction.balanceAfter.toLocaleString(),
-              transaction.description,
-              new Date(transaction.createdAt).toLocaleString('zh-CN'),
-            ])}
-            emptyText="还没有积分流水。"
-          />
+          {(data?.transactions?.length ?? 0) > 0 ? (
+            <TableShell
+              columns={['流水 ID', '类型', '变动', '余额', '说明', '时间']}
+              rows={(data?.transactions ?? []).map((transaction) => [
+                transaction.id,
+                transaction.type,
+                transaction.amount > 0 ? `+${transaction.amount}` : transaction.amount,
+                transaction.balanceAfter.toLocaleString(),
+                transaction.description,
+                new Date(transaction.createdAt).toLocaleString('zh-CN'),
+              ])}
+            />
+          ) : (
+            <EmptyState
+              eyebrow="积分流水"
+              title="还没有任何积分流水哦～"
+              description="当你充值、购买套餐或收到管理员调整后，这里的流水记录会自动更新。"
+              action={
+                <Link href="/plans">
+                  <PrimaryButton>立即购买套餐</PrimaryButton>
+                </Link>
+              }
+            />
+          )}
         </Panel>
       </div>
     </div>

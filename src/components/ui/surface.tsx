@@ -20,13 +20,15 @@ export function StatCard({
   label,
   value,
   icon: Icon,
+  className = '',
 }: {
   label: string
   value: string | number
   icon: LucideIcon
+  className?: string
 }) {
   return (
-    <Panel className="metric-card">
+    <Panel className={`metric-card ${className}`.trim()}>
       <div className="metric-card__header">
         <span>{label}</span>
         <span className="metric-card__icon">
@@ -42,14 +44,28 @@ export function EmptyState({
   title,
   description,
   action,
+  eyebrow,
 }: {
   title: string
   description: string
   action?: React.ReactNode
+  eyebrow?: string
 }) {
   return (
     <Panel className="empty-state">
+      <div className="empty-state__art" aria-hidden="true">
+        <div className="empty-state__halo" />
+        <div className="empty-state__mango">
+          <span className="empty-state__leaf empty-state__leaf--left" />
+          <span className="empty-state__leaf empty-state__leaf--right" />
+          <span className="empty-state__shine" />
+          <span className="empty-state__seed empty-state__seed--one" />
+          <span className="empty-state__seed empty-state__seed--two" />
+          <span className="empty-state__seed empty-state__seed--three" />
+        </div>
+      </div>
       <div className="empty-state__copy">
+        {eyebrow ? <span className="empty-state__eyebrow">{eyebrow}</span> : null}
         <h3>{title}</h3>
         <p>{description}</p>
         {action}
@@ -90,10 +106,12 @@ export function TableShell({
   columns,
   rows,
   emptyText = '暂无数据',
+  emptyState,
 }: {
   columns: string[]
   rows: Array<Array<React.ReactNode>>
   emptyText?: string
+  emptyState?: React.ReactNode
 }) {
   return (
     <div className="table-shell">
@@ -117,7 +135,7 @@ export function TableShell({
           ) : (
             <tr>
               <td colSpan={columns.length} className="table-empty">
-                {emptyText}
+                {emptyState ?? emptyText}
               </td>
             </tr>
           )}
