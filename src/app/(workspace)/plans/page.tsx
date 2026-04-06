@@ -1,10 +1,9 @@
 'use client'
 
-import { CircleDollarSign, Layers3, WalletCards } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { useSession } from '@/components/providers/session-provider'
-import { EmptyState, Panel, PrimaryButton, SecondaryButton, StatCard, StatusPill, TableShell } from '@/components/ui/surface'
+import { Panel, PrimaryButton, SecondaryButton, StatusPill, TableShell } from '@/components/ui/surface'
 import { useApiQuery } from '@/hooks/use-api-query'
 import { apiFetch } from '@/lib/client/api'
 
@@ -98,18 +97,12 @@ export default function PlansPage() {
 
   return (
     <div className="page-stack page-stack--plans">
-      <div className="grid-three page-metrics-grid">
-        <StatCard label="当前积分余额" value={creditsData?.balance.toLocaleString() ?? '0'} icon={CircleDollarSign} className="metric-card--spotlight" />
-        <StatCard label="积分套餐数量" value={creditPlans.length} icon={WalletCards} className="metric-card--spotlight" />
-        <StatCard label="订阅方案数量" value={subscriptionPlans.length} icon={Layers3} className="metric-card--spotlight" />
-      </div>
-
       <section className="hero-copy">
         <h2>选择服务套餐</h2>
-        <p>先充值积分，再购买服务和订阅。真实支付网关已预留，这个版本先用占位支付流程演示。</p>
+        <p>先充值积分，再购买服务和订阅。真实支付网关已经预留，这个版本先用占位支付流程演示。</p>
       </section>
 
-      <Panel className="wallet-banner wallet-banner--plans wallet-banner--spotlight">
+      <Panel className="wallet-banner wallet-banner--plans">
         <div>
           <h3>当前积分余额</h3>
           <p>购买订阅和服务时会从这里直接扣除。</p>
@@ -139,7 +132,7 @@ export default function PlansPage() {
                 </li>
               ))}
             </ul>
-            <PrimaryButton className="primary-button--hero" onClick={() => void createRecharge(plan.creditsGranted ?? 0, plan.priceUsd, plan.slug)} disabled={pendingSlug === plan.slug}>
+            <PrimaryButton onClick={() => void createRecharge(plan.creditsGranted ?? 0, plan.priceUsd, plan.slug)} disabled={pendingSlug === plan.slug}>
               {pendingSlug === plan.slug ? '创建中...' : '创建充值单'}
             </PrimaryButton>
           </Panel>
@@ -174,7 +167,7 @@ export default function PlansPage() {
                 </li>
               ))}
             </ul>
-            <PrimaryButton className="primary-button--hero" onClick={() => void purchasePlan(plan.slug)} disabled={pendingSlug === plan.slug}>
+            <PrimaryButton onClick={() => void purchasePlan(plan.slug)} disabled={pendingSlug === plan.slug}>
               {pendingSlug === plan.slug ? '下单中...' : '立即购买'}
             </PrimaryButton>
           </Panel>
@@ -197,36 +190,24 @@ export default function PlansPage() {
             <p>点击“模拟支付到账”后，积分会实时入账。</p>
           </div>
         </div>
-        {(rechargeData?.rechargeOrders?.length ?? 0) > 0 ? (
-          <TableShell
-            columns={['订单 ID', '积分', '金额', '状态', '创建时间', '操作']}
-            rows={(rechargeData?.rechargeOrders ?? []).map((order) => [
-              order.id,
-              order.credits.toLocaleString(),
-              `$${order.amountUsd}`,
-              <StatusPill key={`${order.id}-status`}>{order.status}</StatusPill>,
-              new Date(order.createdAt).toLocaleString('zh-CN'),
-              order.status === 'PENDING' ? (
-                <SecondaryButton key={`${order.id}-action`} onClick={() => void mockPay(order.id)} disabled={pendingSlug === order.id}>
-                  {pendingSlug === order.id ? '处理中...' : '模拟支付到账'}
-                </SecondaryButton>
-              ) : (
-                '已完成'
-              ),
-            ])}
-          />
-        ) : (
-          <EmptyState
-            eyebrow="充值订单"
-            title="还没有任何充值订单哦～"
-            description="先选择一个积分套餐创建充值单，成功后这里会自动展示完整订单记录。"
-            action={
-              <PrimaryButton className="primary-button--hero" onClick={() => void createRecharge(1000, 10, 'quick-recharge')}>
-                立即购买套餐
-              </PrimaryButton>
-            }
-          />
-        )}
+        <TableShell
+          columns={['订单 ID', '积分', '金额', '状态', '创建时间', '操作']}
+          rows={(rechargeData?.rechargeOrders ?? []).map((order) => [
+            order.id,
+            order.credits.toLocaleString(),
+            `$${order.amountUsd}`,
+            <StatusPill key={`${order.id}-status`}>{order.status}</StatusPill>,
+            new Date(order.createdAt).toLocaleString('zh-CN'),
+            order.status === 'PENDING' ? (
+              <SecondaryButton key={`${order.id}-action`} onClick={() => void mockPay(order.id)} disabled={pendingSlug === order.id}>
+                {pendingSlug === order.id ? '处理中...' : '模拟支付到账'}
+              </SecondaryButton>
+            ) : (
+              '已完成'
+            ),
+          ])}
+          emptyText="还没有充值订单。"
+        />
       </Panel>
     </div>
   )
