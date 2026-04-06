@@ -14,24 +14,12 @@ import {
   UserPlus,
 } from 'lucide-react'
 
-import { useApiQuery } from '@/hooks/use-api-query'
 import { useSession } from '@/components/providers/session-provider'
 import { apiFetch } from '@/lib/client/api'
-import { EmptyState, Panel, PrimaryButton, SecondaryButton, StatusPill, TableShell } from '@/components/ui/surface'
+import { Panel, PrimaryButton, SecondaryButton } from '@/components/ui/surface'
 
 type TaskType = 'FOLLOW' | 'LIKE' | 'REPOST' | 'COMMENT' | 'BOOKMARK' | 'QUOTE'
 type SpeedKey = 'STANDARD' | 'BOOST' | 'TURBO'
-
-type TasksResponse = {
-  tasks: Array<{
-    id: string
-    type: string
-    status: string
-    targetAccount: string
-    targetPostUrl: string | null
-    createdAt: string
-  }>
-}
 
 type TaskDraft = {
   target: string
@@ -58,7 +46,7 @@ const serviceCards: Array<{
   {
     type: 'FOLLOW',
     title: '关注',
-    description: '用真实用户的关注行为补齐账号基础体量，适合持续增长。',
+    description: '用真实用户的关注行为为账号补齐基础体量，适合持续增长。',
     icon: UserPlus,
     targetLabel: '目标用户名',
     targetPlaceholder: '@username',
@@ -67,7 +55,7 @@ const serviceCards: Array<{
   {
     type: 'LIKE',
     title: '点赞',
-    description: '获得更直接的互动反馈，为内容建立早期热度和社交证明。',
+    description: '获得真实用户点赞，每个点赞都来自独立账号，推动早期热度和社交认证。',
     icon: Heart,
     targetLabel: '目标推文地址',
     targetPlaceholder: 'https://x.com/username/status/1234567890',
@@ -77,7 +65,7 @@ const serviceCards: Array<{
   {
     type: 'REPOST',
     title: '转发',
-    description: '通过转发加快内容扩散节奏，让优质内容获得更广触达。',
+    description: '通过真实转发提升内容影响力，内容通过真实加密时间线传播。',
     icon: Repeat2,
     targetLabel: '目标推文地址',
     targetPlaceholder: 'https://x.com/username/status/1234567890',
@@ -87,7 +75,7 @@ const serviceCards: Array<{
   {
     type: 'COMMENT',
     title: '评论',
-    description: '生成真实评论氛围，提升讨论深度与内容互动感。',
+    description: '生成真实、贴合语境的讨论，让评论区更匹配你的帖子并受众化。',
     icon: MessageCircle,
     targetLabel: '目标推文地址',
     targetPlaceholder: 'https://x.com/username/status/1234567890',
@@ -97,7 +85,7 @@ const serviceCards: Array<{
   {
     type: 'BOOKMARK',
     title: '收藏',
-    description: '增加真实用户收藏信号，帮助内容建立长期兴趣标签。',
+    description: '增加来自真实用户的收藏，收藏代表长期兴趣而非噪音。',
     icon: Bookmark,
     targetLabel: '目标推文地址',
     targetPlaceholder: 'https://x.com/username/status/1234567890',
@@ -107,7 +95,7 @@ const serviceCards: Array<{
   {
     type: 'QUOTE',
     title: '引用',
-    description: '引用真实推文并形成二次传播节点，让讨论链路更自然。',
+    description: '引用真实加密推文，引用会匹配你的帖子，受众和加密文化。',
     icon: Quote,
     targetLabel: '目标推文地址',
     targetPlaceholder: 'https://x.com/username/status/1234567890',
@@ -124,7 +112,6 @@ const initialDraft = (): TaskDraft => ({
 
 export default function ServicesPage() {
   const { identityToken, user } = useSession()
-  const { data, refetch } = useApiQuery<TasksResponse>('/api/tasks')
   const [selectedTypes, setSelectedTypes] = useState<TaskType[]>([])
   const [drafts, setDrafts] = useState<Record<TaskType, TaskDraft>>({
     FOLLOW: initialDraft(),
@@ -207,7 +194,6 @@ export default function ServicesPage() {
         BOOKMARK: initialDraft(),
         QUOTE: initialDraft(),
       })
-      await refetch()
     } finally {
       setIsSubmitting(false)
     }
@@ -217,12 +203,12 @@ export default function ServicesPage() {
     <div className="page-stack page-stack--services">
       <Panel className="notice-bar services-notice">
         <span className="notice-dot" />
-        <p>所有增长任务都进入订单与后台记录，当前版本演示任务创建与流转，不执行真实外部动作。</p>
+        <p>所有增长行为都通过真实用户执行，当前页面用于创建任务与配置速度、数量和消耗。</p>
       </Panel>
 
       <section className="hero-copy hero-copy--tight services-hero">
         <h2>创建增长任务</h2>
-        <p>选择你需要的增长动作，MangoGrowth 会按任务类型逐项生成配置卡片。</p>
+        <p>选择你需要的增长动作，点击后会在下方按顺序生成对应配置区域。</p>
       </section>
 
       <div className="services-picker-grid">
@@ -363,33 +349,6 @@ export default function ServicesPage() {
           </Panel>
         </div>
       ) : null}
-
-      <Panel>
-        <div className="panel-heading">
-          <div>
-            <h3>任务记录</h3>
-            <p>最近创建的任务会出现在这里。</p>
-          </div>
-        </div>
-        <TableShell
-          columns={['任务 ID', '类型', '状态', '目标账号', '创建时间']}
-          rows={(data?.tasks ?? []).map((task) => [
-            task.id,
-            task.type,
-            <StatusPill key={`${task.id}-status`}>{task.status}</StatusPill>,
-            task.targetAccount,
-            new Date(task.createdAt).toLocaleString('zh-CN'),
-          ])}
-          emptyState={
-            <EmptyState
-              title="还没有任务记录哦～"
-              description="先从上方选择你需要的任务类型，系统会按你选择的项目逐项展开配置。"
-              action={<PrimaryButton onClick={() => toggleType('FOLLOW')}>选择任务</PrimaryButton>}
-              className="empty-state--table"
-            />
-          }
-        />
-      </Panel>
     </div>
   )
 }

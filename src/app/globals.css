@@ -1199,12 +1199,146 @@ textarea {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
+.page-stack--dashboard {
+  max-width: 980px;
+  margin: 0 auto;
+  gap: 18px;
+}
+
+.page-stack--dashboard section {
+  display: grid;
+  gap: 10px;
+}
+
+.dashboard-guide-grid {
+  gap: 12px;
+}
+
+.guide-card--dashboard {
+  min-height: 68px;
+  padding: 14px 16px;
+  gap: 12px;
+  border-radius: 16px;
+}
+
+.guide-card--dashboard .guide-card__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+
+.guide-card--dashboard .guide-card__step {
+  margin-bottom: 4px;
+  padding: 3px 6px;
+  font-size: 0.62rem;
+}
+
+.guide-card--dashboard .guide-card__body h3 {
+  font-size: 0.98rem;
+}
+
+.guide-card--dashboard .guide-card__body p {
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .dashboard-metrics-grid {
-  grid-template-columns: 1.1fr 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.page-stack--dashboard .metric-card {
+  min-height: 82px;
+  padding: 14px 14px 12px;
+  border-radius: 16px;
+}
+
+.page-stack--dashboard .metric-card__header {
+  font-size: 0.88rem;
+}
+
+.page-stack--dashboard .metric-card__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+}
+
+.page-stack--dashboard .metric-card__value {
+  margin-top: 14px;
+  font-size: 1.1rem;
+  letter-spacing: -0.04em;
 }
 
 .page-stack--dashboard .empty-state {
-  min-height: 132px;
+  min-height: 180px;
+}
+
+.empty-state--dashboard {
+  min-height: 180px;
+  align-items: center;
+}
+
+.empty-state--dashboard .empty-state__copy {
+  gap: 12px;
+}
+
+.page-stack--dashboard .quota-card {
+  min-height: 180px;
+  padding: 18px 20px;
+}
+
+.page-stack--dashboard .panel-heading h3,
+.page-stack--dashboard .chart-card__header h3 {
+  font-size: 0.98rem;
+}
+
+.page-stack--dashboard .panel-heading p,
+.page-stack--dashboard .chart-card__header p {
+  font-size: 0.86rem;
+}
+
+.chart-card--dashboard {
+  padding: 16px 16px 14px;
+  border-radius: 16px;
+}
+
+.chart-card--dashboard .chart-card__ranges button {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
+
+.chart-card--dashboard .chart-card__canvas {
+  margin-top: 10px;
+  height: 300px;
+}
+
+.dashboard-orders-panel {
+  border-radius: 16px;
+}
+
+.panel-heading--dashboard {
+  padding: 16px 16px 0;
+}
+
+.page-stack--dashboard .table-shell {
+  margin-top: 8px;
+}
+
+.page-stack--dashboard .data-table th,
+.page-stack--dashboard .data-table td {
+  padding: 12px 10px;
+  font-size: 0.84rem;
+}
+
+.page-stack--dashboard .data-table th {
+  font-size: 0.76rem;
+}
+
+.page-stack--dashboard .status-pill {
+  min-height: 24px;
+  padding: 0 8px;
+  font-size: 0.76rem;
 }
 
 .billing-top-grid {
