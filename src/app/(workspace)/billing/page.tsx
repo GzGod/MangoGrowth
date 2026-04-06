@@ -1,15 +1,15 @@
 'use client'
 
-import Link from 'next/link'
 import { CircleDollarSign, UserRound, WalletCards } from 'lucide-react'
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
 import { UsageChart } from '@/components/charts/usage-chart'
 import { useSession } from '@/components/providers/session-provider'
+import { EmptyState, Panel, PrimaryButton, StatCard, StatusPill, TableShell } from '@/components/ui/surface'
 import { useApiQuery } from '@/hooks/use-api-query'
 import { resolveDisplayIdentity } from '@/lib/auth/identity'
 import { usageRanges } from '@/lib/data/dashboard'
-import { EmptyState, Panel, PrimaryButton, StatCard, StatusPill, TableShell } from '@/components/ui/surface'
 
 type UsageRangeKey = (typeof usageRanges)[number]['key']
 
@@ -46,8 +46,8 @@ export default function BillingPage() {
   const displayIdentity = resolveDisplayIdentity(user, authIdentity, isAuthenticated)
 
   return (
-    <div className="page-stack">
-      <div className="grid-three">
+    <div className="page-stack page-stack--billing">
+      <div className="grid-three billing-top-grid">
         <Panel className="profile-card">
           <span className="profile-card__label">我的资料</span>
           <div className="profile-card__row">
@@ -99,46 +99,48 @@ export default function BillingPage() {
         <UsageChart data={chartData} />
       </Panel>
 
-      <Panel>
-        <div className="panel-heading">
-          <div>
-            <h3>充值订单</h3>
-            <p>展示最近的充值订单和支付状态。</p>
+      <div className="grid-two billing-ledger-grid">
+        <Panel>
+          <div className="panel-heading">
+            <div>
+              <h3>充值订单</h3>
+              <p>展示最近的充值订单和支付状态。</p>
+            </div>
           </div>
-        </div>
-        <TableShell
-          columns={['订单 ID', '积分', '金额', '状态', '创建时间']}
-          rows={(data?.rechargeOrders ?? []).map((order) => [
-            order.id,
-            order.credits.toLocaleString(),
-            `$${order.amountUsd}`,
-            <StatusPill key={`${order.id}-status`}>{order.status}</StatusPill>,
-            new Date(order.createdAt).toLocaleString('zh-CN'),
-          ])}
-          emptyText="还没有充值订单。"
-        />
-      </Panel>
+          <TableShell
+            columns={['订单 ID', '积分', '金额', '状态', '创建时间']}
+            rows={(data?.rechargeOrders ?? []).map((order) => [
+              order.id,
+              order.credits.toLocaleString(),
+              `$${order.amountUsd}`,
+              <StatusPill key={`${order.id}-status`}>{order.status}</StatusPill>,
+              new Date(order.createdAt).toLocaleString('zh-CN'),
+            ])}
+            emptyText="还没有充值订单。"
+          />
+        </Panel>
 
-      <Panel>
-        <div className="panel-heading">
-          <div>
-            <h3>积分流水</h3>
-            <p>记录充值、购买套餐和后续人工调整。</p>
+        <Panel>
+          <div className="panel-heading">
+            <div>
+              <h3>积分流水</h3>
+              <p>记录充值、购买套餐和后续人工调整。</p>
+            </div>
           </div>
-        </div>
-        <TableShell
-          columns={['流水 ID', '类型', '变动', '余额', '说明', '时间']}
-          rows={(data?.transactions ?? []).map((transaction) => [
-            transaction.id,
-            transaction.type,
-            transaction.amount > 0 ? `+${transaction.amount}` : transaction.amount,
-            transaction.balanceAfter.toLocaleString(),
-            transaction.description,
-            new Date(transaction.createdAt).toLocaleString('zh-CN'),
-          ])}
-          emptyText="还没有积分流水。"
-        />
-      </Panel>
+          <TableShell
+            columns={['流水 ID', '类型', '变动', '余额', '说明', '时间']}
+            rows={(data?.transactions ?? []).map((transaction) => [
+              transaction.id,
+              transaction.type,
+              transaction.amount > 0 ? `+${transaction.amount}` : transaction.amount,
+              transaction.balanceAfter.toLocaleString(),
+              transaction.description,
+              new Date(transaction.createdAt).toLocaleString('zh-CN'),
+            ])}
+            emptyText="还没有积分流水。"
+          />
+        </Panel>
+      </div>
     </div>
   )
 }

@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from 'react'
 
-import { useApiQuery } from '@/hooks/use-api-query'
 import { useSession } from '@/components/providers/session-provider'
-import { apiFetch } from '@/lib/client/api'
 import { Panel, PrimaryButton, SecondaryButton, StatusPill, TableShell } from '@/components/ui/surface'
+import { useApiQuery } from '@/hooks/use-api-query'
+import { apiFetch } from '@/lib/client/api'
 
 type PlansResponse = {
   plans: Array<{
@@ -96,13 +96,13 @@ export default function PlansPage() {
   }
 
   return (
-    <div className="page-stack">
+    <div className="page-stack page-stack--plans">
       <section className="hero-copy">
         <h2>选择服务套餐</h2>
         <p>先充值积分，再购买服务和订阅。真实支付网关已经预留，这个版本先用占位支付流程演示。</p>
       </section>
 
-      <Panel className="wallet-banner">
+      <Panel className="wallet-banner wallet-banner--plans">
         <div>
           <h3>当前积分余额</h3>
           <p>购买订阅和服务时会从这里直接扣除。</p>
@@ -110,7 +110,7 @@ export default function PlansPage() {
         <strong>{creditsData?.balance.toLocaleString() ?? '0'}</strong>
       </Panel>
 
-      <div className="plan-grid">
+      <div className="plan-grid plan-grid--credits">
         {creditPlans.map((plan) => (
           <Panel key={plan.id} className={`plan-card${plan.isFeatured ? ' is-featured' : ''}`}>
             {plan.isFeatured ? <span className="plan-card__badge">热门</span> : null}
@@ -144,7 +144,7 @@ export default function PlansPage() {
         <p>服务和订阅会直接消耗积分，下单后订单会同步出现在管理员后台。</p>
       </section>
 
-      <div className="plan-grid">
+      <div className="plan-grid plan-grid--subscriptions">
         {subscriptionPlans.map((plan) => (
           <Panel key={plan.id} className={`plan-card${plan.isFeatured ? ' is-featured' : ''}`}>
             {plan.isFeatured ? <span className="plan-card__badge">热门</span> : null}

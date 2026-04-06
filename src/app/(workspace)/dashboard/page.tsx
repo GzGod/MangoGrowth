@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
 import { UsageChart } from '@/components/charts/usage-chart'
+import { EmptyState, Panel, PrimaryButton, SectionTitle, StatCard, StatusPill, TableShell } from '@/components/ui/surface'
 import { useApiQuery } from '@/hooks/use-api-query'
 import { usageRanges } from '@/lib/data/dashboard'
-import { EmptyState, Panel, PrimaryButton, SectionTitle, StatCard, StatusPill, TableShell } from '@/components/ui/surface'
 
 type UsageRangeKey = (typeof usageRanges)[number]['key']
 
@@ -54,7 +54,7 @@ export default function DashboardPage() {
   const chartData = useMemo(() => data?.usage?.[activeRange] ?? [], [activeRange, data])
 
   return (
-    <div className="page-stack">
+    <div className="page-stack page-stack--dashboard">
       <section>
         <SectionTitle>新手引导</SectionTitle>
         <div className="grid-two">
@@ -76,7 +76,7 @@ export default function DashboardPage() {
 
       <section>
         <SectionTitle>概览</SectionTitle>
-        <div className="grid-three">
+        <div className="grid-three dashboard-metrics-grid">
           <StatCard label="我的积分" value={loading ? '...' : data?.metrics.balance.toLocaleString() ?? '0'} icon={CircleDollarSign} />
           <StatCard label="订单总数" value={loading ? '...' : data?.metrics.orderCount ?? 0} icon={FolderKanban} />
           <StatCard label="花费积分总数" value={loading ? '...' : data?.metrics.spentCredits.toLocaleString() ?? '0'} icon={WalletCards} />
@@ -90,7 +90,7 @@ export default function DashboardPage() {
             <div className="panel-heading">
               <div>
                 <h3>当前激活订阅</h3>
-                <p>你当前可用的长期订阅方案与到期时间。</p>
+                <p>这里展示你当前可用的长期订阅方案与到期时间。</p>
               </div>
             </div>
             <div className="quota-list">

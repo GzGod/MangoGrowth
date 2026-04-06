@@ -20,6 +20,8 @@
   --border-soft: #ebe7df;
   --shadow-card: 0 18px 48px rgba(19, 21, 24, 0.05);
   --radius-card: 22px;
+  --sidebar-width: 228px;
+  --content-max: 1520px;
 }
 
 :root[data-theme='dark'] {
@@ -46,8 +48,8 @@ body {
   margin: 0;
   color: var(--text-primary);
   background:
-    radial-gradient(circle at top left, rgba(255, 251, 235, 0.8), transparent 28%),
-    linear-gradient(180deg, #fbfaf8 0%, #f8f6f2 100%);
+    radial-gradient(circle at top left, rgba(255, 248, 224, 0.84), transparent 24%),
+    linear-gradient(180deg, #fbfaf8 0%, #f7f4ef 100%);
 }
 
 :root[data-theme='dark'] body {
@@ -84,22 +86,22 @@ textarea {
 }
 
 .sidebar {
-  width: 236px;
+  width: var(--sidebar-width);
   flex: none;
   border-right: 1px solid var(--border-soft);
   background: rgba(255, 255, 255, 0.76);
   backdrop-filter: blur(18px);
-  padding: 18px 10px;
+  padding: 20px 12px 18px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
 }
 
 .sidebar__brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 8px;
+  padding: 0 10px;
   min-width: 0;
 }
 
@@ -120,7 +122,7 @@ textarea {
 }
 
 .sidebar__brand-title {
-  font-size: 1.42rem;
+  font-size: 1.28rem;
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.04em;
@@ -131,10 +133,10 @@ textarea {
 
 .sidebar__brand-tagline {
   margin-top: 4px;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
 }
 
 .sidebar__nav,
@@ -170,7 +172,7 @@ textarea {
 .sidebar__footer {
   margin-top: auto;
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .sidebar__invite-card,
@@ -178,7 +180,7 @@ textarea {
   width: 100%;
   border: 1px solid var(--border-soft);
   border-radius: 14px;
-  padding: 12px;
+  padding: 13px 12px;
   background: #fff;
 }
 
@@ -213,7 +215,7 @@ textarea {
 }
 
 .sidebar__balance-row strong {
-  font-size: 1.8rem;
+  font-size: 1.65rem;
   line-height: 1;
   letter-spacing: -0.05em;
 }
@@ -357,7 +359,7 @@ textarea {
 .app-shell__content {
   flex: 1;
   min-width: 0;
-  padding: 18px 18px 40px;
+  padding: 20px 24px 44px;
 }
 
 .mobile-nav {
@@ -365,11 +367,13 @@ textarea {
 }
 
 .page-header {
-  min-height: 54px;
+  min-height: 56px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
+  max-width: var(--content-max);
+  margin: 0 auto;
 }
 
 .page-header__eyebrow {
@@ -382,25 +386,28 @@ textarea {
 .page-header__mobile-title,
 .page-header h1 {
   margin: 0;
-  font-size: 1.68rem;
+  font-size: 1.52rem;
   line-height: 1.08;
   letter-spacing: -0.05em;
 }
 
 .app-shell__page {
-  padding-top: 14px;
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding-top: 16px;
 }
 
 .page-stack {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .grid-two,
 .grid-three,
 .plan-grid {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .grid-two {
@@ -433,7 +440,7 @@ textarea {
 }
 
 .section-title {
-  margin: 2px 0 10px;
+  margin: 2px 0 12px;
   font-weight: 700;
 }
 
@@ -442,6 +449,7 @@ textarea {
   border-radius: var(--radius-card);
   background: rgba(255, 255, 255, 0.9);
   box-shadow: var(--shadow-card);
+  overflow: clip;
 }
 
 :root[data-theme='dark'] .panel,
@@ -476,14 +484,15 @@ textarea {
 .guide-card,
 .service-card,
 .info-card {
-  padding: 18px;
+  padding: 20px;
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: 16px;
 }
 
 .guide-card {
   align-items: center;
+  min-height: 96px;
 }
 
 .guide-card__icon,
@@ -531,7 +540,8 @@ textarea {
 }
 
 .metric-card {
-  padding: 18px;
+  padding: 20px;
+  min-height: 116px;
 }
 
 .metric-card__header {
@@ -545,15 +555,15 @@ textarea {
 
 .metric-card__value {
   display: block;
-  margin-top: 16px;
-  font-size: 1.8rem;
+  margin-top: 18px;
+  font-size: 1.95rem;
   line-height: 1;
   letter-spacing: -0.06em;
 }
 
 .empty-state {
-  min-height: 170px;
-  padding: 28px 20px;
+  min-height: 156px;
+  padding: 30px 24px;
   display: grid;
   place-items: center;
   text-align: center;
@@ -562,7 +572,8 @@ textarea {
 .empty-state__copy {
   display: grid;
   justify-items: center;
-  gap: 8px;
+  gap: 10px;
+  max-width: 460px;
 }
 
 .primary-button,
@@ -603,17 +614,17 @@ textarea {
 }
 
 .hero-copy {
-  padding: 24px 0 8px;
+  padding: 18px 0 8px;
   text-align: center;
 }
 
 .hero-copy--tight {
-  padding-top: 8px;
+  padding-top: 2px;
 }
 
 .hero-copy h2 {
-  font-size: 1.72rem;
-  margin-bottom: 6px;
+  font-size: 1.58rem;
+  margin-bottom: 8px;
 }
 
 .toolbar {
@@ -652,7 +663,7 @@ textarea {
 }
 
 .chart-card {
-  padding: 16px;
+  padding: 18px 18px 16px;
 }
 
 .chart-card__header,
@@ -685,8 +696,8 @@ textarea {
 }
 
 .chart-card__canvas {
-  margin-top: 18px;
-  height: 280px;
+  margin-top: 16px;
+  height: 290px;
 }
 
 .table-shell {
@@ -703,9 +714,9 @@ textarea {
 .data-table th,
 .data-table td {
   text-align: left;
-  padding: 13px 10px;
+  padding: 14px 12px;
   border-bottom: 1px solid #f1eee8;
-  font-size: 0.92rem;
+  font-size: 0.89rem;
 }
 
 .data-table th {
@@ -734,7 +745,7 @@ textarea {
 .profile-card,
 .redeem-card,
 .task-form-card {
-  padding: 18px;
+  padding: 20px;
 }
 
 .profile-card__label {
@@ -747,7 +758,7 @@ textarea {
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .plan-card {
@@ -755,7 +766,7 @@ textarea {
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 18px 14px 14px;
+  padding: 22px 18px 18px;
 }
 
 .plan-card.is-featured {
@@ -779,14 +790,14 @@ textarea {
 }
 
 .plan-card__price-row {
-  margin: 12px 0 8px;
+  margin: 16px 0 10px;
   display: flex;
   align-items: baseline;
   gap: 8px;
 }
 
 .plan-card__price-row strong {
-  font-size: 2.05rem;
+  font-size: 2.16rem;
   line-height: 1;
   letter-spacing: -0.06em;
 }
@@ -798,9 +809,10 @@ textarea {
 .plan-card__list {
   list-style: none;
   padding: 0;
-  margin: 18px 0 20px;
+  margin: 18px 0 24px;
   display: grid;
   gap: 12px;
+  flex: 1;
 }
 
 .plan-card__list li {
@@ -856,11 +868,11 @@ textarea {
 }
 
 .quota-card {
-  padding: 18px;
+  padding: 20px;
 }
 
 .quota-list {
-  margin-top: 16px;
+  margin-top: 18px;
   display: grid;
   gap: 12px;
 }
@@ -881,13 +893,54 @@ textarea {
 }
 
 .wallet-banner {
-  padding: 18px;
+  padding: 20px;
 }
 
 .wallet-banner strong {
-  font-size: 1.7rem;
+  font-size: 1.82rem;
   line-height: 1;
   letter-spacing: -0.05em;
+}
+
+.page-stack--dashboard .grid-two:first-of-type {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.dashboard-metrics-grid {
+  grid-template-columns: 1.1fr 1fr 1fr;
+}
+
+.page-stack--dashboard .empty-state {
+  min-height: 132px;
+}
+
+.billing-top-grid {
+  grid-template-columns: 1.2fr 1fr 1fr;
+}
+
+.billing-ledger-grid {
+  align-items: start;
+}
+
+.billing-ledger-grid > .panel {
+  min-height: 100%;
+}
+
+.page-stack--plans .hero-copy {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.wallet-banner--plans {
+  padding-inline: 22px;
+}
+
+.plan-grid--credits {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.plan-grid--subscriptions {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .login-shell {
@@ -960,7 +1013,15 @@ textarea {
 }
 
 @media (max-width: 1024px) {
-  .plan-grid {
+  .plan-grid,
+  .plan-grid--credits,
+  .plan-grid--subscriptions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-metrics-grid,
+  .billing-top-grid,
+  .billing-ledger-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -998,6 +1059,9 @@ textarea {
   .grid-two,
   .grid-three,
   .plan-grid,
+  .dashboard-metrics-grid,
+  .billing-top-grid,
+  .billing-ledger-grid,
   .login-hero__list,
   .task-form {
     grid-template-columns: 1fr;
