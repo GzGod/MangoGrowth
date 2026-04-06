@@ -31,7 +31,7 @@ const valueCards = [
     description: '多个账号协同工作，打造有机的病毒式增长效果',
     icon: Shield,
   },
-]
+] as const
 
 export default function AccountGrowthPage() {
   const { data } = useApiQuery<DashboardResponse>('/api/dashboard')
@@ -49,7 +49,7 @@ export default function AccountGrowthPage() {
             <div className="info-card__icon">
               <Icon size={20} />
             </div>
-            <div>
+            <div className="info-card__content">
               <h3>{title}</h3>
               <p>{description}</p>
             </div>
