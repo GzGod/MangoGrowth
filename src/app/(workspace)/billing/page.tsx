@@ -68,12 +68,13 @@ export default function BillingPage() {
         <div className="section-title">套餐配额</div>
         <EmptyState
           title="当前没有额外配额面板"
-          description="这里保留给后续支付回执、发票和账单周期统计。"
+          description="这里会在后续展示支付回执、发票信息和账单周期统计。"
           action={
             <Link href="/plans">
               <PrimaryButton>购买套餐</PrimaryButton>
             </Link>
           }
+          className="billing-quota-empty"
         />
       </section>
 
@@ -116,7 +117,18 @@ export default function BillingPage() {
               <StatusPill key={`${order.id}-status`}>{order.status}</StatusPill>,
               new Date(order.createdAt).toLocaleString('zh-CN'),
             ])}
-            emptyText="还没有充值订单。"
+            emptyState={
+              <EmptyState
+                title="还没有任何充值订单哦～"
+                description="创建第一笔充值订单后，这里会自动展示金额、积分和支付状态。"
+                action={
+                  <Link href="/plans">
+                    <PrimaryButton>立即购买套餐</PrimaryButton>
+                  </Link>
+                }
+                className="empty-state--table"
+              />
+            }
           />
         </Panel>
 
@@ -137,7 +149,18 @@ export default function BillingPage() {
               transaction.description,
               new Date(transaction.createdAt).toLocaleString('zh-CN'),
             ])}
-            emptyText="还没有积分流水。"
+            emptyState={
+              <EmptyState
+                title="还没有任何积分流水哦～"
+                description="当你充值、购买套餐或收到管理员调整后，这里的流水记录会自动更新。"
+                action={
+                  <Link href="/plans">
+                    <PrimaryButton>立即购买套餐</PrimaryButton>
+                  </Link>
+                }
+                className="empty-state--table"
+              />
+            }
           />
         </Panel>
       </div>

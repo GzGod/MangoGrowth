@@ -57,11 +57,11 @@ export default function DashboardPage() {
     <div className="page-stack page-stack--dashboard">
       <section>
         <SectionTitle>新手引导</SectionTitle>
-        <div className="grid-two">
+        <div className="grid-two dashboard-guide-grid">
           {onboarding.map((card) => (
             <Panel key={card.title} className="guide-card">
               <div className="guide-card__icon">
-                <Rocket size={18} />
+                <Rocket size={20} />
               </div>
               <div className="guide-card__body">
                 <span className="guide-card__step">{card.step}</span>
@@ -86,7 +86,7 @@ export default function DashboardPage() {
       <section>
         <SectionTitle>套餐配额</SectionTitle>
         {data?.subscriptions && data.subscriptions.length > 0 ? (
-          <Panel className="quota-card">
+          <Panel className="quota-card dashboard-quota-card">
             <div className="panel-heading">
               <div>
                 <h3>当前激活订阅</h3>
@@ -112,11 +112,12 @@ export default function DashboardPage() {
                 <PrimaryButton>购买套餐</PrimaryButton>
               </Link>
             }
+            className="dashboard-quota-empty"
           />
         )}
       </section>
 
-      <Panel className="chart-card">
+      <Panel className="chart-card dashboard-usage-card">
         <div className="chart-card__header">
           <div>
             <h3>使用量</h3>
@@ -138,7 +139,7 @@ export default function DashboardPage() {
         <UsageChart data={chartData} />
       </Panel>
 
-      <Panel>
+      <Panel className="dashboard-recent-orders">
         <div className="panel-heading">
           <div>
             <h3>最近订单</h3>
@@ -158,7 +159,19 @@ export default function DashboardPage() {
             `${order.progress}%`,
             order.creditsCost.toLocaleString(),
           ])}
-          emptyText="还没有订单，先去套餐页购买一个方案。"
+          emptyState={
+            <EmptyState
+              title="还没有任何订单哦～"
+              description="先去套餐页购买一个方案，第一笔订单会自动同步到这里。"
+              action={
+                <Link href="/plans">
+                  <PrimaryButton>立即购买套餐</PrimaryButton>
+                </Link>
+              }
+              align="left"
+              className="dashboard-orders-empty"
+            />
+          }
         />
       </Panel>
     </div>

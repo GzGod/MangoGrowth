@@ -1,9 +1,10 @@
 'use client'
 
+import { CircleDollarSign, Layers3, WalletCards } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { useSession } from '@/components/providers/session-provider'
-import { Panel, PrimaryButton, SecondaryButton, StatusPill, TableShell } from '@/components/ui/surface'
+import { EmptyState, Panel, PrimaryButton, SecondaryButton, StatCard, StatusPill, TableShell } from '@/components/ui/surface'
 import { useApiQuery } from '@/hooks/use-api-query'
 import { apiFetch } from '@/lib/client/api'
 
@@ -97,9 +98,15 @@ export default function PlansPage() {
 
   return (
     <div className="page-stack page-stack--plans">
+      <div className="grid-three page-metrics-grid">
+        <StatCard label="当前积分余额" value={creditsData?.balance.toLocaleString() ?? '0'} icon={CircleDollarSign} />
+        <StatCard label="积分套餐数量" value={creditPlans.length} icon={WalletCards} />
+        <StatCard label="订阅方案数量" value={subscriptionPlans.length} icon={Layers3} />
+      </div>
+
       <section className="hero-copy">
         <h2>选择服务套餐</h2>
-        <p>先充值积分，再购买服务和订阅。真实支付网关已经预留，这个版本先用占位支付流程演示。</p>
+        <p>先充值积分，再购买服务和订阅。真实支付网关已预留，这个版本先用占位支付流程演示。</p>
       </section>
 
       <Panel className="wallet-banner wallet-banner--plans">
@@ -206,7 +213,18 @@ export default function PlansPage() {
               '已完成'
             ),
           ])}
-          emptyText="还没有充值订单。"
+          emptyState={
+            <EmptyState
+              title="还没有任何充值订单哦～"
+              description="先选择一个积分套餐创建充值单，成功后这里会自动展示完整订单记录。"
+              action={
+                <PrimaryButton onClick={() => void createRecharge(1000, 10, 'quick-recharge')}>
+                  立即购买套餐
+                </PrimaryButton>
+              }
+              className="empty-state--table"
+            />
+          }
         />
       </Panel>
     </div>

@@ -26,16 +26,16 @@ export default function LoginPage() {
           </div>
           <div>
             <div className="sidebar__brand-title">MangoGrowth</div>
-            <div className="sidebar__brand-tagline">Powered by MangoGrowth</div>
+            <div className="sidebar__brand-tagline">现代增长控制台</div>
           </div>
         </div>
 
         <div className="login-hero__copy">
           <span className="guide-card__step">FULL-STACK CONSOLE</span>
-          <h1>一个项目里打通登录、充值、下单和管理员审单</h1>
+          <h1>一个项目里打通登录、充值、下单和管理员视图</h1>
           <p>
-            现在这套控制台已经切到 Next.js 全栈架构，前端高保真复刻，认证接入 Privy，
-            数据层预留了支付、任务流转和管理员订单视图。
+            这套控制台已经切换到 Next.js 全栈架构，前端保持高保真 SaaS 后台体验，认证接入
+            Privy，数据层预留了支付、任务流转和管理员订单视图。
           </p>
         </div>
 

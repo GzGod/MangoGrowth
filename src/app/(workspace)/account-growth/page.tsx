@@ -18,36 +18,36 @@ type DashboardResponse = {
 const valueCards = [
   {
     title: '真实账号',
-    description: '所有互动水位都先进入订单与任务模型，方便后端做可审计的流转管理。',
+    description: '所有互动和订单都进入统一流转模型，便于后续管理和审计。',
     icon: BadgeCheck,
   },
   {
     title: '自动互动',
-    description: '每次新增服务、订阅和订单都会带着完整的业务状态进入后台视图。',
+    description: '服务、订阅与任务建立清晰状态链路，后台可持续跟踪。',
     icon: Sparkles,
   },
   {
     title: '矩阵增长',
-    description: '管理员可以从一个后台查看谁下单了、买了什么、当前进度和积分变化。',
+    description: '管理员可以从一个后台查看谁下单、购买了什么以及当前进度。',
     icon: Shield,
   },
-]
+] as const
 
 export default function AccountGrowthPage() {
   const { data } = useApiQuery<DashboardResponse>('/api/dashboard')
 
   return (
-    <div className="page-stack">
+    <div className="page-stack page-stack--growth">
       <section className="hero-copy">
-        <h2>账号增长计划</h2>
+        <h2>账户增长计划</h2>
         <p>绑定多个增长模式，把用户充值、下单、任务和订阅都放在同一套控制台里。</p>
       </section>
 
-      <div className="grid-three">
+      <div className="growth-plan-grid">
         {valueCards.map(({ title, description, icon: Icon }) => (
-          <Panel key={title} className="info-card">
-            <div className="info-card__icon">
-              <Icon size={18} />
+          <Panel key={title} className="info-card growth-plan-card">
+            <div className="info-card__icon growth-plan-card__icon">
+              <Icon size={48} />
             </div>
             <div>
               <h3>{title}</h3>
@@ -58,7 +58,7 @@ export default function AccountGrowthPage() {
       </div>
 
       {data?.subscriptions && data.subscriptions.length > 0 ? (
-        <Panel className="quota-card">
+        <Panel className="quota-card growth-subscription-card">
           <div className="panel-heading">
             <div>
               <h3>已激活订阅</h3>
@@ -77,12 +77,13 @@ export default function AccountGrowthPage() {
       ) : (
         <EmptyState
           title="您还没有订阅方案"
-          description="订阅后即可开启长期自动化增长，管理员后台也会同步出现完整订单信息。"
+          description="订阅后即可开始长期自动化增长，系统也会同步生成完整的账单与订单记录。"
           action={
             <Link href="/plans">
-              <PrimaryButton>立即订阅</PrimaryButton>
+              <PrimaryButton className="growth-empty-state__button">立即订阅</PrimaryButton>
             </Link>
           }
+          className="growth-empty-state"
         />
       )}
     </div>

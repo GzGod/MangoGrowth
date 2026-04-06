@@ -20,17 +20,19 @@ export function StatCard({
   label,
   value,
   icon: Icon,
+  className = '',
 }: {
   label: string
   value: string | number
   icon: LucideIcon
+  className?: string
 }) {
   return (
-    <Panel className="metric-card">
+    <Panel className={`metric-card ${className}`.trim()}>
       <div className="metric-card__header">
         <span>{label}</span>
         <span className="metric-card__icon">
-          <Icon size={16} />
+          <Icon size={18} />
         </span>
       </div>
       <strong className="metric-card__value">{value}</strong>
@@ -42,14 +44,29 @@ export function EmptyState({
   title,
   description,
   action,
+  eyebrow,
+  align = 'center',
+  className = '',
 }: {
   title: string
   description: string
   action?: React.ReactNode
+  eyebrow?: string
+  align?: 'center' | 'left'
+  className?: string
 }) {
   return (
-    <Panel className="empty-state">
+    <Panel className={`empty-state empty-state--${align} ${className}`.trim()}>
+      <div className="empty-state__art" aria-hidden="true">
+        <div className="empty-state__halo" />
+        <div className="empty-state__mango">
+          <span className="empty-state__leaf empty-state__leaf--left" />
+          <span className="empty-state__leaf empty-state__leaf--right" />
+          <span className="empty-state__shine" />
+        </div>
+      </div>
       <div className="empty-state__copy">
+        {eyebrow ? <span className="empty-state__eyebrow">{eyebrow}</span> : null}
         <h3>{title}</h3>
         <p>{description}</p>
         {action}
@@ -90,10 +107,12 @@ export function TableShell({
   columns,
   rows,
   emptyText = '暂无数据',
+  emptyState,
 }: {
   columns: string[]
   rows: Array<Array<React.ReactNode>>
   emptyText?: string
+  emptyState?: React.ReactNode
 }) {
   return (
     <div className="table-shell">
@@ -117,7 +136,7 @@ export function TableShell({
           ) : (
             <tr>
               <td colSpan={columns.length} className="table-empty">
-                {emptyText}
+                {emptyState ?? emptyText}
               </td>
             </tr>
           )}
