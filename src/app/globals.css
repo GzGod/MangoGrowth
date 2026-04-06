@@ -385,7 +385,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 12px;
-  max-width: var(--content-max);
+  max-width: none;
   margin: 0;
 }
 
@@ -430,7 +430,7 @@ textarea {
 
 .app-shell__page {
   width: 100%;
-  max-width: var(--content-max);
+  max-width: none;
   margin: 0;
   padding-top: 16px;
 }
