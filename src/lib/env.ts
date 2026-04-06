@@ -21,10 +21,22 @@ function requireUrlEnv(name: string, value: string | undefined, fallback?: strin
   }
 }
 
-export const env = {
-  NEXT_PUBLIC_PRIVY_APP_ID: requireEnv('NEXT_PUBLIC_PRIVY_APP_ID', process.env.NEXT_PUBLIC_PRIVY_APP_ID),
-  PRIVY_APP_SECRET: requireEnv('PRIVY_APP_SECRET', process.env.PRIVY_APP_SECRET),
-  DATABASE_URL: requireEnv('DATABASE_URL', process.env.DATABASE_URL),
-  BOOTSTRAP_ADMIN_EMAILS: process.env.BOOTSTRAP_ADMIN_EMAILS ?? '',
-  NEXT_PUBLIC_APP_URL: requireUrlEnv('NEXT_PUBLIC_APP_URL', process.env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000'),
+export function getPublicPrivyAppId() {
+  return requireEnv('NEXT_PUBLIC_PRIVY_APP_ID', process.env.NEXT_PUBLIC_PRIVY_APP_ID)
+}
+
+export function getPrivyAppSecret() {
+  return requireEnv('PRIVY_APP_SECRET', process.env.PRIVY_APP_SECRET)
+}
+
+export function getDatabaseUrl() {
+  return requireEnv('DATABASE_URL', process.env.DATABASE_URL)
+}
+
+export function getBootstrapAdminEmails() {
+  return process.env.BOOTSTRAP_ADMIN_EMAILS ?? ''
+}
+
+export function getPublicAppUrl() {
+  return requireUrlEnv('NEXT_PUBLIC_APP_URL', process.env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000')
 }

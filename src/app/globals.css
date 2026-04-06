@@ -22,6 +22,17 @@
   --radius-card: 22px;
 }
 
+:root[data-theme='dark'] {
+  --bg-page: #111317;
+  --bg-card: #171b21;
+  --bg-soft: #1d222b;
+  --text-primary: #f5f7fb;
+  --text-secondary: #b2bac7;
+  --text-muted: #7f8794;
+  --border-soft: #2a303a;
+  --shadow-card: 0 22px 60px rgba(0, 0, 0, 0.35);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -37,6 +48,12 @@ body {
   background:
     radial-gradient(circle at top left, rgba(255, 251, 235, 0.8), transparent 28%),
     linear-gradient(180deg, #fbfaf8 0%, #f8f6f2 100%);
+}
+
+:root[data-theme='dark'] body {
+  background:
+    radial-gradient(circle at top left, rgba(255, 208, 120, 0.08), transparent 25%),
+    linear-gradient(180deg, #111317 0%, #0d1014 100%);
 }
 
 a {
@@ -226,6 +243,33 @@ textarea {
   font-size: 0.84rem;
 }
 
+.sidebar__meta-link {
+  width: 100%;
+}
+
+.sidebar__meta-link-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar__settings {
+  position: relative;
+}
+
+.sidebar__settings-trigger {
+  min-height: 38px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  justify-content: flex-start;
+}
+
+.sidebar__settings-trigger.is-open {
+  color: var(--text-primary);
+}
+
 .sidebar__account {
   justify-content: space-between;
 }
@@ -243,6 +287,70 @@ textarea {
   height: 28px;
   border: 0;
   background: transparent;
+  color: var(--text-secondary);
+}
+
+.settings-popover {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 12px);
+  display: flex;
+  align-items: flex-start;
+  z-index: 30;
+}
+
+.settings-popover__panel,
+.settings-popover__submenu {
+  width: 166px;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 40px rgba(17, 20, 24, 0.12);
+  backdrop-filter: blur(18px);
+}
+
+:root[data-theme='dark'] .settings-popover__panel,
+:root[data-theme='dark'] .settings-popover__submenu {
+  background: rgba(24, 28, 34, 0.98);
+}
+
+.settings-popover__submenu {
+  margin-left: -8px;
+  margin-top: 40px;
+}
+
+.settings-option,
+.settings-submenu-option {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+
+.settings-option:hover,
+.settings-submenu-option:hover,
+.settings-submenu-option.is-active {
+  background: var(--bg-soft);
+}
+
+.settings-option__left,
+.settings-option__right,
+.settings-submenu-option__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-option__right {
   color: var(--text-secondary);
 }
 
@@ -334,6 +442,35 @@ textarea {
   border-radius: var(--radius-card);
   background: rgba(255, 255, 255, 0.9);
   box-shadow: var(--shadow-card);
+}
+
+:root[data-theme='dark'] .panel,
+:root[data-theme='dark'] .sidebar,
+:root[data-theme='dark'] .mobile-drawer__panel,
+:root[data-theme='dark'] .search-field,
+:root[data-theme='dark'] .sidebar__invite-card,
+:root[data-theme='dark'] .sidebar__balance,
+:root[data-theme='dark'] .search-field input,
+:root[data-theme='dark'] .redeem-card__row input,
+:root[data-theme='dark'] .task-form input,
+:root[data-theme='dark'] .task-form select,
+:root[data-theme='dark'] .task-form textarea {
+  background: rgba(23, 27, 33, 0.9);
+}
+
+:root[data-theme='dark'] .sidebar__link:hover,
+:root[data-theme='dark'] .sidebar__link.is-active,
+:root[data-theme='dark'] .chart-card__ranges .is-active,
+:root[data-theme='dark'] .chart-card__ranges button,
+:root[data-theme='dark'] .secondary-button,
+:root[data-theme='dark'] .sidebar__circle-button,
+:root[data-theme='dark'] .guide-card__icon,
+:root[data-theme='dark'] .service-card__icon,
+:root[data-theme='dark'] .info-card__icon,
+:root[data-theme='dark'] .metric-card__icon,
+:root[data-theme='dark'] .guide-card__step,
+:root[data-theme='dark'] .quota-row {
+  background: #1d222b;
 }
 
 .guide-card,

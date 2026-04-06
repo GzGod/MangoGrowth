@@ -9,6 +9,7 @@ type LocalUser = {
   id: string
   privyUserId: string
   email: string | null
+  walletAddress: string | null
   name: string | null
   avatarUrl: string | null
   role: 'USER' | 'ADMIN'

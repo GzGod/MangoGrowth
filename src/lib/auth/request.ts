@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
-import { env } from '@/lib/env'
+import { getBootstrapAdminEmails } from '@/lib/env'
 import { isBootstrapAdmin, parseBootstrapAdminEmails } from '@/lib/auth/admin'
-import { privyClient } from '@/lib/privy'
+import { getPrivyClient } from '@/lib/privy'
 
 type PrivyLinkedAccount = {
   type?: string
@@ -25,13 +25,12 @@ export type SessionUser = {
   id: string
   privyUserId: string
   email: string | null
+  walletAddress: string | null
   name: string | null
   avatarUrl: string | null
   role: 'USER' | 'ADMIN'
   creditBalance: number
 }
-
-const bootstrapAdminEmails = parseBootstrapAdminEmails(env.BOOTSTRAP_ADMIN_EMAILS)
 
 function extractIdentityToken(request: Request) {
   const authorization = request.headers.get('authorization')
@@ -50,6 +49,12 @@ function extractEmail(privyUser: PrivyUserShape) {
   const linkedAccounts = privyUser.linkedAccounts ?? privyUser.linked_accounts ?? []
   const emailAccount = linkedAccounts.find((account) => account.type === 'email')
   return emailAccount?.address?.toLowerCase() ?? emailAccount?.email?.toLowerCase() ?? null
+}
+
+function extractWalletAddress(privyUser: PrivyUserShape) {
+  const linkedAccounts = privyUser.linkedAccounts ?? privyUser.linked_accounts ?? []
+  const walletAccount = linkedAccounts.find((account) => typeof account.address === 'string' && account.address.trim().length > 0)
+  return walletAccount?.address?.trim() ?? null
 }
 
 function extractName(privyUser: PrivyUserShape) {
@@ -71,8 +76,10 @@ export async function requireSessionUser(request: Request): Promise<SessionUser>
     throw new Response('Unauthorized', { status: 401 })
   }
 
-  const privyUser = (await privyClient.getUser({ idToken: identityToken })) as unknown as PrivyUserShape
+  const privyUser = (await getPrivyClient().getUser({ idToken: identityToken })) as unknown as PrivyUserShape
   const email = extractEmail(privyUser)
+  const walletAddress = extractWalletAddress(privyUser)
+  const bootstrapAdminEmails = parseBootstrapAdminEmails(getBootstrapAdminEmails())
   const role: 'USER' | 'ADMIN' = isBootstrapAdmin(email, bootstrapAdminEmails) ? 'ADMIN' : 'USER'
 
   const user = await db.user.upsert({
@@ -101,7 +108,10 @@ export async function requireSessionUser(request: Request): Promise<SessionUser>
     },
   })
 
-  return user
+  return {
+    ...user,
+    walletAddress,
+  }
 }
 
 export async function requireAdminSessionUser(request: Request) {
