@@ -42,13 +42,15 @@ export function EmptyState({
   title,
   description,
   action,
+  className = '',
 }: {
   title: string
   description: string
   action?: React.ReactNode
+  className?: string
 }) {
   return (
-    <Panel className="empty-state">
+    <Panel className={`empty-state ${className}`.trim()}>
       <div className="empty-state__copy">
         <h3>{title}</h3>
         <p>{description}</p>
@@ -90,10 +92,12 @@ export function TableShell({
   columns,
   rows,
   emptyText = '暂无数据',
+  emptyState,
 }: {
   columns: string[]
   rows: Array<Array<React.ReactNode>>
   emptyText?: string
+  emptyState?: React.ReactNode
 }) {
   return (
     <div className="table-shell">
@@ -117,7 +121,7 @@ export function TableShell({
           ) : (
             <tr>
               <td colSpan={columns.length} className="table-empty">
-                {emptyText}
+                {emptyState ?? emptyText}
               </td>
             </tr>
           )}
