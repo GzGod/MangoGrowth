@@ -2,11 +2,14 @@
 
 import { ArrowRight, CircleDollarSign, FolderKanban, Rocket, WalletCards } from 'lucide-react'
 import Link from 'next/link'
+import { useMemo, useState } from 'react'
 
 import { UsageChart } from '@/components/charts/usage-chart'
 import { useApiQuery } from '@/hooks/use-api-query'
-import { usageData } from '@/lib/data/dashboard'
+import { usageRanges } from '@/lib/data/dashboard'
 import { EmptyState, Panel, PrimaryButton, SectionTitle, StatCard, StatusPill, TableShell } from '@/components/ui/surface'
+
+type UsageRangeKey = (typeof usageRanges)[number]['key']
 
 type DashboardResponse = {
   metrics: {
@@ -14,6 +17,7 @@ type DashboardResponse = {
     orderCount: number
     spentCredits: number
   }
+  usage: Record<UsageRangeKey, Array<{ date: string; credits: number }>>
   orders: Array<{
     id: string
     status: string
@@ -41,10 +45,13 @@ const onboarding = [
     title: '启动增长任务',
     description: '购买套餐或订阅后，创建任务并跟踪执行进度与订单状态。',
   },
-]
+] as const
 
 export default function DashboardPage() {
   const { data, loading } = useApiQuery<DashboardResponse>('/api/dashboard')
+  const [activeRange, setActiveRange] = useState<UsageRangeKey>('last7')
+
+  const chartData = useMemo(() => data?.usage?.[activeRange] ?? [], [activeRange, data])
 
   return (
     <div className="page-stack">
@@ -113,17 +120,22 @@ export default function DashboardPage() {
         <div className="chart-card__header">
           <div>
             <h3>使用量</h3>
-            <p>(1,000 Credits)</p>
+            <p>基于真实积分消费流水</p>
           </div>
           <div className="chart-card__ranges">
-            <button type="button" className="is-active">
-              最近7天
-            </button>
-            <button type="button">最近30天</button>
-            <button type="button">最近3个月</button>
+            {usageRanges.map((range) => (
+              <button
+                key={range.key}
+                type="button"
+                className={range.key === activeRange ? 'is-active' : ''}
+                onClick={() => setActiveRange(range.key)}
+              >
+                {range.label}
+              </button>
+            ))}
           </div>
         </div>
-        <UsageChart data={usageData} />
+        <UsageChart data={chartData} />
       </Panel>
 
       <Panel>

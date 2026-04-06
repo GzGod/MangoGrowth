@@ -25,7 +25,11 @@ export const serviceActionCards = [
   },
 ] as const
 
-export const usageRanges = ['最近7天', '最近30天', '最近3个月'] as const
+export const usageRanges = [
+  { key: 'last7', label: '最近7天' },
+  { key: 'last30', label: '最近30天' },
+  { key: 'last90', label: '最近3个月' },
+] as const
 
 export const usageData = [
   { date: 'Mar 31', credits: 0 },

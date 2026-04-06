@@ -24,6 +24,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useSession } from '@/components/providers/session-provider'
+import { resolveDisplayIdentity } from '@/lib/auth/identity'
 
 const navigation = [
   { href: '/dashboard', label: '仪表盘', icon: BarChart3 },
@@ -47,30 +48,6 @@ const titleMap: Record<string, string> = {
 type ThemeMode = 'light' | 'dark'
 type LanguageMode = 'zh-CN' | 'en'
 type SettingsPanel = 'root' | 'language' | 'theme'
-
-function truncateWalletAddress(value: string) {
-  if (value.length <= 14) {
-    return value
-  }
-
-  return `${value.slice(0, 6)}...${value.slice(-4)}`
-}
-
-function getUserIdentityLabel(user: ReturnType<typeof useSession>['user']) {
-  if (!user) {
-    return '未登录'
-  }
-
-  if (user.email) {
-    return user.email
-  }
-
-  if (user.walletAddress) {
-    return truncateWalletAddress(user.walletAddress)
-  }
-
-  return '未绑定账户'
-}
 
 function Brand() {
   return (
@@ -106,7 +83,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { logout, user } = useSession()
+  const { logout, user, authIdentity, isAuthenticated } = useSession()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [settingsPanel, setSettingsPanel] = useState<SettingsPanel>('root')
@@ -177,8 +154,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const languageLabel = useMemo(() => (language === 'zh-CN' ? '中文' : 'English'), [language])
   const themeLabel = useMemo(() => (theme === 'light' ? '亮色' : '暗色'), [theme])
-  const identityLabel = getUserIdentityLabel(user)
-  const identityTitle = user?.email ?? user?.walletAddress ?? '未绑定账户'
+  const displayIdentity = resolveDisplayIdentity(user, authIdentity, isAuthenticated)
 
   const closeSettings = () => {
     setIsSettingsOpen(false)
@@ -325,8 +301,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="sidebar__account">
-              <span className="sidebar__account-email" title={identityTitle}>
-                {identityLabel}
+              <span className="sidebar__account-email" title={displayIdentity.title}>
+                {displayIdentity.label}
               </span>
               <button type="button" className="sidebar__logout" aria-label="退出登录" onClick={() => void logout()}>
                 <LogOut size={14} />

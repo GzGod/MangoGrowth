@@ -24,6 +24,7 @@ export async function GET(request: Request) {
         orderCount: snapshot.orderCount,
         spentCredits: snapshot.spentCredits,
       },
+      usage: snapshot.usage,
       orders: snapshot.orders.map((order: DashboardOrderRecord) => serializeOrder(order)),
       rechargeOrders: snapshot.rechargeOrders.map((order: DashboardRechargeRecord) => serializeRechargeOrder(order)),
       subscriptions: snapshot.subscriptions.map((subscription: DashboardSubscriptionRecord) => serializeSubscription(subscription)),

@@ -4,6 +4,7 @@ import { useIdentityToken, usePrivy } from '@privy-io/react-auth'
 import { createContext, useContext, useEffect, useState } from 'react'
 
 import { apiFetch } from '@/lib/client/api'
+import { extractPrivyIdentity } from '@/lib/auth/identity'
 
 type LocalUser = {
   id: string
@@ -22,6 +23,10 @@ type SessionContextValue = {
   isAuthenticated: boolean
   isSessionLoading: boolean
   user: LocalUser | null
+  authIdentity: {
+    email: string | null
+    walletAddress: string | null
+  }
   login: () => void
   logout: () => Promise<void>
   refreshSession: () => Promise<void>
@@ -30,10 +35,11 @@ type SessionContextValue = {
 const SessionContext = createContext<SessionContextValue | null>(null)
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const { ready, authenticated, login, logout } = usePrivy()
+  const { ready, authenticated, login, logout, user: privyUser } = usePrivy()
   const { identityToken } = useIdentityToken()
   const [user, setUser] = useState<LocalUser | null>(null)
   const [isSessionLoading, setIsSessionLoading] = useState(true)
+  const authIdentity = extractPrivyIdentity(privyUser)
 
   const refreshSession = async () => {
     if (!ready) {
@@ -99,6 +105,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: authenticated,
     isSessionLoading,
     user,
+    authIdentity,
     login,
     logout,
     refreshSession,

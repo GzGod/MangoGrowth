@@ -1,5 +1,49 @@
 import { db } from '@/lib/db'
 
+type UsageTransaction = {
+  createdAt: Date
+  amount: number
+}
+
+function startOfUtcDay(date: Date) {
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+}
+
+function formatUsageLabel(day: number) {
+  const date = new Date(day)
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
+export function buildUsageSeries(transactions: UsageTransaction[], days: number, now = new Date()) {
+  const buckets = new Map<number, number>()
+
+  for (const transaction of transactions) {
+    if (transaction.amount >= 0) {
+      continue
+    }
+
+    const key = startOfUtcDay(transaction.createdAt)
+    buckets.set(key, (buckets.get(key) ?? 0) + Math.abs(transaction.amount))
+  }
+
+  const end = startOfUtcDay(now)
+  const series = []
+
+  for (let offset = days - 1; offset >= 0; offset -= 1) {
+    const day = end - offset * 24 * 60 * 60 * 1000
+    series.push({
+      date: formatUsageLabel(day),
+      credits: buckets.get(day) ?? 0,
+    })
+  }
+
+  return series
+}
+
 export async function getDashboardSnapshot(userId: string) {
   const [user, orders, rechargeOrders, subscriptions, transactions] = await Promise.all([
     db.user.findUniqueOrThrow({
@@ -40,6 +84,11 @@ export async function getDashboardSnapshot(userId: string) {
     balance: user.creditBalance,
     orderCount: orders.length,
     spentCredits,
+    usage: {
+      last7: buildUsageSeries(transactions, 7),
+      last30: buildUsageSeries(transactions, 30),
+      last90: buildUsageSeries(transactions, 90),
+    },
     orders,
     rechargeOrders,
     subscriptions,
