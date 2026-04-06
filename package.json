@@ -22,7 +22,6 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.1",
-    "utf-8-validate": "6.0.6",
     "zod": "3.25.76"
   },
   "devDependencies": {
@@ -34,20 +33,15 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/jsdom": "^27.0.0",
-    "@types/node": "^24.12.0",
-    "@types/react": "^19.2.14",
+    "@types/node": "24.12.2",
+    "@types/react": "19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.2",
     "jsdom": "^29.0.1",
     "prisma": "^6.19.3",
     "tailwindcss": "^4.1.16",
-    "typescript": "^5.9.3",
+    "typescript": "5.9.3",
     "vitest": "^4.1.2"
-  },
-  "overrides": {
-    "rpc-websockets": {
-      "utf-8-validate": "6.0.6"
-    }
   }
 }
