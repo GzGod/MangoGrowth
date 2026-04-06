@@ -1238,7 +1238,7 @@ textarea {
 
 .page-stack--dashboard {
   max-width: 980px;
-  margin: 0;
+  margin: 0 auto;
   gap: 18px;
 }
 
@@ -1380,7 +1380,7 @@ textarea {
 
 .page-stack--account-growth {
   max-width: 980px;
-  margin: 0;
+  margin: 0 auto;
   gap: 18px;
 }
 
