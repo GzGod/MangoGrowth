@@ -11,6 +11,8 @@ import {
   Menu,
   Moon,
   Palette,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   Shield,
   Sparkles,
@@ -33,16 +35,16 @@ const navigation = [
   { href: '/orders', label: '订单', icon: CalendarDays },
   { href: '/billing', label: '账单', icon: CreditCard },
   { href: '/plans', label: '套餐 & 订阅', icon: Layers3 },
-]
+] as const
 
-const titleMap: Record<string, string> = {
-  '/dashboard': '仪表盘',
-  '/services': '服务',
-  '/account-growth': '账户增长',
-  '/orders': '订单',
-  '/billing': '账单',
-  '/plans': '套餐 & 订阅',
-  '/admin': '管理后台',
+const pageMeta: Record<string, { title: string; icon: typeof BarChart3 }> = {
+  '/dashboard': { title: '仪表盘', icon: BarChart3 },
+  '/services': { title: '服务', icon: Sparkles },
+  '/account-growth': { title: '账户增长', icon: TrendingUp },
+  '/orders': { title: '订单', icon: CalendarDays },
+  '/billing': { title: '账单', icon: CreditCard },
+  '/plans': { title: '套餐 & 订阅', icon: Layers3 },
+  '/admin': { title: '管理后台', icon: Shield },
 }
 
 type ThemeMode = 'light' | 'dark'
@@ -85,30 +87,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { logout, user, authIdentity, isAuthenticated } = useSession()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem('mango-sidebar-collapsed') === 'true'
+  })
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [settingsPanel, setSettingsPanel] = useState<SettingsPanel>('root')
   const [theme, setTheme] = useState<ThemeMode>(() => {
-    if (typeof window === 'undefined') {
-      return 'light'
-    }
-
+    if (typeof window === 'undefined') return 'light'
     const storedTheme = window.localStorage.getItem('mango-theme')
     return storedTheme === 'dark' ? 'dark' : 'light'
   })
   const [language, setLanguage] = useState<LanguageMode>(() => {
-    if (typeof window === 'undefined') {
-      return 'zh-CN'
-    }
-
+    if (typeof window === 'undefined') return 'zh-CN'
     const storedLanguage = window.localStorage.getItem('mango-language')
     return storedLanguage === 'en' ? 'en' : 'zh-CN'
   })
   const settingsRef = useRef<HTMLDivElement | null>(null)
-  const pageTitle = titleMap[pathname] ?? '仪表盘'
+
+  const currentPage = pageMeta[pathname] ?? pageMeta['/dashboard']
+  const HeaderIcon = currentPage.icon
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-
     try {
       window.localStorage.setItem('mango-theme', theme)
     } catch {
@@ -125,9 +126,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [language])
 
   useEffect(() => {
-    if (!isSettingsOpen) {
-      return
+    try {
+      window.localStorage.setItem('mango-sidebar-collapsed', String(isDesktopSidebarCollapsed))
+    } catch {
+      // Ignore localStorage access failures.
     }
+  }, [isDesktopSidebarCollapsed])
+
+  useEffect(() => {
+    if (!isSettingsOpen) return
 
     const handlePointerDown = (event: MouseEvent) => {
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
@@ -161,8 +168,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setSettingsPanel('root')
   }
 
+  const toggleDesktopSidebar = () => {
+    setIsDesktopSidebarCollapsed((current) => !current)
+  }
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isDesktopSidebarCollapsed ? ' app-shell--sidebar-collapsed' : ''}`}>
       <aside className="sidebar">
         <Brand />
 
@@ -202,9 +213,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => {
                   setIsSettingsOpen((current) => {
                     const next = !current
-                    if (!next) {
-                      setSettingsPanel('root')
-                    }
+                    if (!next) setSettingsPanel('root')
                     return next
                   })
                 }}
@@ -317,15 +326,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button type="button" className="mobile-nav__button" aria-label="打开导航菜单" onClick={() => setIsDrawerOpen(true)}>
             <Menu size={18} />
           </button>
-          <div>
-            <div className="page-header__eyebrow">MangoGrowth</div>
-            <div className="page-header__mobile-title">{pageTitle}</div>
+          <div className="page-header__title">
+            <HeaderIcon size={15} />
+            <span>{currentPage.title}</span>
           </div>
         </div>
 
-        <header className="page-header">
-          <div className="page-header__eyebrow">控制台</div>
-          <h1>{pageTitle}</h1>
+        <header className="page-header page-header--console">
+          <button
+            type="button"
+            className="page-header__sidebar-toggle"
+            aria-label={isDesktopSidebarCollapsed ? '展开侧栏' : '隐藏侧栏'}
+            onClick={toggleDesktopSidebar}
+          >
+            {isDesktopSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+
+          <div className="page-header__title">
+            <HeaderIcon size={15} />
+            <h1>{currentPage.title}</h1>
+          </div>
         </header>
 
         <div className="app-shell__page">{children}</div>
