@@ -2,12 +2,16 @@
 
 import Link from 'next/link'
 import { CircleDollarSign, UserRound, WalletCards } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 import { UsageChart } from '@/components/charts/usage-chart'
 import { useSession } from '@/components/providers/session-provider'
 import { useApiQuery } from '@/hooks/use-api-query'
-import { usageData } from '@/lib/data/dashboard'
+import { resolveDisplayIdentity } from '@/lib/auth/identity'
+import { usageRanges } from '@/lib/data/dashboard'
 import { EmptyState, Panel, PrimaryButton, StatCard, StatusPill, TableShell } from '@/components/ui/surface'
+
+type UsageRangeKey = (typeof usageRanges)[number]['key']
 
 type DashboardResponse = {
   metrics: {
@@ -15,6 +19,7 @@ type DashboardResponse = {
     orderCount: number
     spentCredits: number
   }
+  usage: Record<UsageRangeKey, Array<{ date: string; credits: number }>>
   rechargeOrders: Array<{
     id: string
     credits: number
@@ -33,8 +38,12 @@ type DashboardResponse = {
 }
 
 export default function BillingPage() {
-  const { user } = useSession()
+  const { user, authIdentity, isAuthenticated } = useSession()
   const { data } = useApiQuery<DashboardResponse>('/api/dashboard')
+  const [activeRange, setActiveRange] = useState<UsageRangeKey>('last7')
+
+  const chartData = useMemo(() => data?.usage?.[activeRange] ?? [], [activeRange, data])
+  const displayIdentity = resolveDisplayIdentity(user, authIdentity, isAuthenticated)
 
   return (
     <div className="page-stack">
@@ -43,7 +52,7 @@ export default function BillingPage() {
           <span className="profile-card__label">我的资料</span>
           <div className="profile-card__row">
             <div>
-              <strong>{user?.email ?? '未绑定邮箱'}</strong>
+              <strong title={displayIdentity.title}>{displayIdentity.label}</strong>
               <p>{user?.name ?? 'Privy 用户'}</p>
             </div>
             <div className="metric-card__icon">
@@ -72,17 +81,22 @@ export default function BillingPage() {
         <div className="chart-card__header">
           <div>
             <h3>使用量</h3>
-            <p>(1,000 Credits)</p>
+            <p>基于真实积分消费流水</p>
           </div>
           <div className="chart-card__ranges">
-            <button type="button" className="is-active">
-              最近7天
-            </button>
-            <button type="button">最近30天</button>
-            <button type="button">最近3个月</button>
+            {usageRanges.map((range) => (
+              <button
+                key={range.key}
+                type="button"
+                className={range.key === activeRange ? 'is-active' : ''}
+                onClick={() => setActiveRange(range.key)}
+              >
+                {range.label}
+              </button>
+            ))}
           </div>
         </div>
-        <UsageChart data={usageData} />
+        <UsageChart data={chartData} />
       </Panel>
 
       <Panel>
