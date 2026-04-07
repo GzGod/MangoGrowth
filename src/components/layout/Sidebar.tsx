@@ -32,10 +32,9 @@ import { useSession } from '@/components/providers/session-provider'
 import { resolveDisplayIdentity } from '@/lib/auth/identity'
 
 const RECHARGE_OPTIONS = [
-  { label: '$10', amountUsd: 1000 },
-  { label: '$45', amountUsd: 4500 },
-  { label: '$80', amountUsd: 8000 },
-  { label: '$350', amountUsd: 35000 },
+  { label: '$100', amountUsd: 10000 },
+  { label: '$500', amountUsd: 50000 },
+  { label: '$1000', amountUsd: 100000 },
 ]
 
 const navigation = [
@@ -105,12 +104,45 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [selectedOption, setSelectedOption] = useState<(typeof RECHARGE_OPTIONS)[number] | null>(null)
   const [rechargeStatus, setRechargeStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [rechargeError, setRechargeError] = useState<string | null>(null)
+  const [customAmount, setCustomAmount] = useState('')
+  const [usdcBalance, setUsdcBalance] = useState<string | null>(null)
 
   const activeWallet = wallets.find((w) => w.walletClientType !== 'privy') ?? wallets.find((w) => w.walletClientType === 'privy')
 
+  const USDC_ADDRESS_BASE_SEPOLIA = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+  const USDC_ADDRESS_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+
+  useEffect(() => {
+    if (!activeWallet) { setUsdcBalance(null); return }
+    const network = process.env.NEXT_PUBLIC_X402_NETWORK ?? 'base-sepolia'
+    const usdcAddress = network === 'base' ? USDC_ADDRESS_BASE : USDC_ADDRESS_BASE_SEPOLIA
+    const rpcUrl = network === 'base' ? 'https://mainnet.base.org' : 'https://sepolia.base.org'
+    void (async () => {
+      try {
+        const res = await fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 1, method: 'eth_call',
+            params: [{ to: usdcAddress, data: `0x70a08231000000000000000000000000${activeWallet.address.slice(2)}` }, 'latest'],
+          }),
+        })
+        const json = await res.json() as { result?: string }
+        if (json.result && json.result !== '0x') {
+          setUsdcBalance((Number(BigInt(json.result)) / 1e6).toFixed(2))
+        } else {
+          setUsdcBalance('0.00')
+        }
+      } catch { setUsdcBalance(null) }
+    })()
+  }, [activeWallet])
+
+  const effectiveAmountUsd = customAmount
+    ? Math.round(parseFloat(customAmount) * 100)
+    : (selectedOption?.amountUsd ?? 0)
+
   const handleRecharge = async () => {
-    console.log('[recharge] selectedOption:', selectedOption, 'identityToken:', !!identityToken, 'activeWallet:', activeWallet?.address)
-    if (!selectedOption || !identityToken || !activeWallet) {
+    if (!identityToken || !activeWallet || effectiveAmountUsd <= 0) {
       if (!activeWallet) setRechargeError('请先连接钱包')
       return
     }
@@ -120,12 +152,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const createRes = await fetch('/api/recharge-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${identityToken}` },
-        body: JSON.stringify({ amountUsd: selectedOption.amountUsd }),
+        body: JSON.stringify({ amountUsd: effectiveAmountUsd }),
       })
       if (!createRes.ok) throw new Error('创建充值订单失败')
       const { rechargeOrder } = (await createRes.json()) as { rechargeOrder: { id: string } }
 
-      const payFetch = wrapFetchWithPayment({ walletAddress: activeWallet.address, fetch })
+      const payFetch = wrapFetchWithPayment({ walletAddress: activeWallet.address, fetch, maxValue: BigInt(effectiveAmountUsd) * BigInt(1e4) })
       const payRes = await payFetch(`/api/recharge-orders/${rechargeOrder.id}/pay`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${identityToken}` },
@@ -145,6 +177,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const closeRechargeModal = () => {
     setShowRechargeModal(false)
     setSelectedOption(null)
+    setCustomAmount('')
     setRechargeStatus('idle')
     setRechargeError(null)
   }
@@ -437,13 +470,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <button
                       key={opt.amountUsd}
                       type="button"
-                      className={`recharge-option${selectedOption?.amountUsd === opt.amountUsd ? ' is-selected' : ''}`}
-                      onClick={() => setSelectedOption(opt)}
+                      className={`recharge-option${selectedOption?.amountUsd === opt.amountUsd && !customAmount ? ' is-selected' : ''}`}
+                      onClick={() => { setSelectedOption(opt); setCustomAmount('') }}
                     >
                       <strong>{opt.label}</strong>
                       <span>USDC</span>
                     </button>
                   ))}
+                </div>
+                <div className="recharge-custom">
+                  <label className="recharge-custom__label">自定义金额 (USD)</label>
+                  <div className="recharge-custom__input-wrap">
+                    <span>$</span>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="输入金额"
+                      value={customAmount}
+                      onChange={(e) => { setCustomAmount(e.target.value); setSelectedOption(null) }}
+                      className="recharge-custom__input"
+                    />
+                  </div>
                 </div>
                 {rechargeError && <p className="modal-box__error">{rechargeError}</p>}
 
@@ -455,6 +502,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <strong>钱包未连接</strong>
                     <span>加密货币支付需要连接钱包</span>
                     <button type="button" className="modal-box__confirm-btn" onClick={() => connectWallet()}>
+                      <Wallet size={14} />
                       连接钱包
                     </button>
                   </div>
@@ -463,6 +511,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <div className="recharge-wallet-info">
                       <Wallet size={14} />
                       <span>{activeWallet.address.slice(0, 6)}...{activeWallet.address.slice(-4)}</span>
+                      {usdcBalance !== null && <span className="recharge-wallet-info__balance">{usdcBalance} USDC</span>}
                       <button type="button" className="recharge-wallet-info__disconnect" onClick={() => connectWallet()}>切换钱包</button>
                     </div>
                     <div className="modal-box__actions">
@@ -471,9 +520,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         type="button"
                         className="modal-box__confirm-btn"
                         onClick={() => void handleRecharge()}
-                        disabled={!selectedOption || rechargeStatus === 'loading'}
+                        disabled={effectiveAmountUsd <= 0 || rechargeStatus === 'loading'}
                       >
-                        {rechargeStatus === 'loading' ? '支付中...' : '确认支付'}
+                        {rechargeStatus === 'loading' ? '支付中...' : `确认支付 $${(effectiveAmountUsd / 100).toFixed(2)}`}
                       </button>
                     </div>
                   </>
