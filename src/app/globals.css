@@ -1865,10 +1865,132 @@ textarea {
   justify-content: center;
 }
 
-.admin-create-grid {
+.page-stack--admin {
+  max-width: 1180px;
+  margin: 0 auto;
+  gap: 16px;
+}
+
+.admin-notice-bar {
+  min-height: 52px;
+  padding: 14px 18px;
+}
+
+.admin-notice-bar p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+
+.admin-notice-bar strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.admin-panel {
+  padding: 18px 18px 16px;
+  border-radius: 18px;
+}
+
+.admin-panel__heading {
+  align-items: flex-start;
+}
+
+.admin-panel__heading h3 {
+  font-size: 1rem;
+}
+
+.admin-panel__heading p {
+  margin-top: 4px;
+  max-width: 720px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.admin-panel__heading--table {
+  margin-bottom: 4px;
+}
+
+.admin-hero-grid {
+  margin-top: 16px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
+}
+
+.admin-highlight-card {
+  min-height: 82px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.76);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-highlight-card__icon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 14px;
+  background: var(--bg-soft);
+  display: grid;
+  place-items: center;
+  color: var(--text-primary);
+}
+
+.admin-highlight-card strong {
+  display: block;
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.admin-highlight-card p {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.admin-subsection {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #f1ede6;
+  display: grid;
+  gap: 14px;
+}
+
+.admin-subsection--table {
+  gap: 10px;
+}
+
+.admin-subsection__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-subsection__heading h4 {
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.3;
+}
+
+.admin-subsection__heading p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.admin-create-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
 }
 
 .field {
@@ -1922,6 +2044,28 @@ textarea {
   margin: 4px 0 20px;
 }
 
+.panel-actions--admin {
+  margin: 0;
+}
+
+.admin-panel--table .table-shell,
+.admin-subsection--table .table-shell {
+  margin-top: 0;
+}
+
+.admin-panel--table .data-table th,
+.admin-panel--table .data-table td,
+.admin-subsection--table .data-table th,
+.admin-subsection--table .data-table td {
+  padding: 13px 10px;
+  font-size: 0.84rem;
+}
+
+.admin-panel--table .data-table th,
+.admin-subsection--table .data-table th {
+  font-size: 0.76rem;
+}
+
 @media (max-width: 1024px) {
   .plan-grid,
   .plan-grid--credits,
@@ -1931,7 +2075,8 @@ textarea {
 
   .dashboard-metrics-grid,
   .billing-top-grid,
-  .billing-ledger-grid {
+  .billing-ledger-grid,
+  .admin-hero-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1974,6 +2119,7 @@ textarea {
   .billing-ledger-grid,
   .login-hero__list,
   .admin-create-grid,
+  .admin-hero-grid,
   .task-form,
   .services-picker-grid,
   .service-speed-grid,
