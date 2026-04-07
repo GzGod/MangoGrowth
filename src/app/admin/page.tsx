@@ -4,6 +4,8 @@ import { AdminScreen } from '@/components/admin/admin-screen'
 import { AppShell } from '@/components/layout/Sidebar'
 import { getAdminSession } from '@/lib/admin-auth/service'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminPage() {
   const admin = await getAdminSession()
 

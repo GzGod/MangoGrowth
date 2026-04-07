@@ -124,12 +124,12 @@ export function clearAdminSessionResponse() {
 }
 
 export async function getAdminSession(request?: Request): Promise<AdminSessionUser | null> {
-  await ensureBootstrapAdminAccount()
-
   const token = await getCookieToken(request)
   if (!token) {
     return null
   }
+
+  await ensureBootstrapAdminAccount()
 
   const payload = verifyAdminSessionToken(token, getAdminSessionSecret())
   if (!payload) {
