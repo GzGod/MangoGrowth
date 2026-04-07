@@ -13,20 +13,30 @@ import {
   Palette,
   PanelLeftClose,
   PanelLeftOpen,
+  Plus,
   Settings,
   Shield,
   Sparkles,
   SunMedium,
   TrendingUp,
   Wallet,
+  X,
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useWallets, useX402Fetch } from '@privy-io/react-auth'
 
 import { useSession } from '@/components/providers/session-provider'
 import { resolveDisplayIdentity } from '@/lib/auth/identity'
+
+const RECHARGE_OPTIONS = [
+  { credits: 100, amountUsd: 10 },
+  { credits: 500, amountUsd: 45 },
+  { credits: 1000, amountUsd: 80 },
+  { credits: 5000, amountUsd: 350 },
+]
 
 const navigation = [
   { href: '/dashboard', label: '仪表盘', icon: BarChart3 },
@@ -85,9 +95,54 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { logout, user, authIdentity, isAuthenticated } = useSession()
+  const { logout, user, authIdentity, isAuthenticated, identityToken, refreshSession } = useSession()
+  const { wallets } = useWallets()
+  const { wrapFetchWithPayment } = useX402Fetch()
   const isAdminPage = pathname.startsWith('/admin')
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [showRechargeModal, setShowRechargeModal] = useState(false)
+  const [selectedOption, setSelectedOption] = useState<(typeof RECHARGE_OPTIONS)[number] | null>(null)
+  const [rechargeStatus, setRechargeStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [rechargeError, setRechargeError] = useState<string | null>(null)
+
+  const embeddedWallet = wallets.find((w) => w.walletClientType === 'privy')
+
+  const handleRecharge = async () => {
+    if (!selectedOption || !identityToken || !embeddedWallet) return
+    setRechargeStatus('loading')
+    setRechargeError(null)
+    try {
+      const createRes = await fetch('/api/recharge-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${identityToken}` },
+        body: JSON.stringify({ credits: selectedOption.credits, amountUsd: selectedOption.amountUsd }),
+      })
+      if (!createRes.ok) throw new Error('创建充值订单失败')
+      const { rechargeOrder } = (await createRes.json()) as { rechargeOrder: { id: string } }
+
+      const payFetch = wrapFetchWithPayment({ walletAddress: embeddedWallet.address, fetch })
+      const payRes = await payFetch(`/api/recharge-orders/${rechargeOrder.id}/pay`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${identityToken}` },
+      })
+      if (!payRes.ok) {
+        const body = (await payRes.json()) as { error?: string }
+        throw new Error(body.error ?? '支付失败')
+      }
+      setRechargeStatus('success')
+      void refreshSession()
+    } catch (err) {
+      setRechargeStatus('error')
+      setRechargeError(err instanceof Error ? err.message : '支付失败，请重试')
+    }
+  }
+
+  const closeRechargeModal = () => {
+    setShowRechargeModal(false)
+    setSelectedOption(null)
+    setRechargeStatus('idle')
+    setRechargeError(null)
+  }
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.localStorage.getItem('mango-sidebar-collapsed') === 'true'
@@ -200,9 +255,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="sidebar__balance-label">积分余额</span>
             <div className="sidebar__balance-row">
               <strong>{user?.creditBalance.toLocaleString() ?? '0'}</strong>
-              <Link href="/plans" className="sidebar__circle-button" aria-label="购买积分">
-                +
-              </Link>
+              <button
+                type="button"
+                className="sidebar__circle-button"
+                aria-label="充值积分"
+                onClick={() => setShowRechargeModal(true)}
+              >
+                <Plus size={12} />
+              </button>
             </div>
           </div>
 
@@ -351,6 +411,55 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="app-shell__page">{children}</div>
       </main>
+
+      {showRechargeModal && (
+        <div className="modal-overlay" onClick={closeRechargeModal}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-box__header">
+              <h3>充值积分</h3>
+              <button type="button" onClick={closeRechargeModal} aria-label="关闭"><X size={16} /></button>
+            </div>
+            {rechargeStatus === 'success' ? (
+              <div className="modal-box__success">
+                <p>充值成功！积分已到账。</p>
+                <button type="button" className="modal-box__close-btn" onClick={closeRechargeModal}>关闭</button>
+              </div>
+            ) : (
+              <>
+                <p className="modal-box__desc">选择充值金额，使用钱包中的 USDC 完成支付。</p>
+                <div className="recharge-options">
+                  {RECHARGE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.credits}
+                      type="button"
+                      className={`recharge-option${selectedOption?.credits === opt.credits ? ' is-selected' : ''}`}
+                      onClick={() => setSelectedOption(opt)}
+                    >
+                      <strong>{opt.credits.toLocaleString()} 积分</strong>
+                      <span>${opt.amountUsd} USDC</span>
+                    </button>
+                  ))}
+                </div>
+                {rechargeError && <p className="modal-box__error">{rechargeError}</p>}
+                {!embeddedWallet && (
+                  <p className="modal-box__error">未检测到 Privy 内嵌钱包，请先在账户中创建钱包。</p>
+                )}
+                <div className="modal-box__actions">
+                  <button type="button" className="modal-box__cancel-btn" onClick={closeRechargeModal}>取消</button>
+                  <button
+                    type="button"
+                    className="modal-box__confirm-btn"
+                    onClick={() => void handleRecharge()}
+                    disabled={!selectedOption || !embeddedWallet || rechargeStatus === 'loading'}
+                  >
+                    {rechargeStatus === 'loading' ? '支付中...' : '确认支付'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {isDrawerOpen ? (
         <div className="mobile-drawer" role="dialog" aria-modal="true">
