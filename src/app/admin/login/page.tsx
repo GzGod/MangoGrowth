@@ -115,7 +115,7 @@ export default function AdminLoginPage() {
 
           {error ? <p className="field-error">{error}</p> : null}
 
-          <PrimaryButton className="admin-login-form__submit" disabled={isSubmitting}>
+          <PrimaryButton type="submit" className="admin-login-form__submit" disabled={isSubmitting}>
             {isSubmitting ? '登录中...' : '进入管理员后台'}
             <ArrowRight size={16} />
           </PrimaryButton>

@@ -63,10 +63,11 @@ export function EmptyState({
 export function PrimaryButton({
   children,
   className = '',
+  type = 'button',
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type="button" className={`primary-button ${className}`.trim()} {...props}>
+    <button type={type} className={`primary-button ${className}`.trim()} {...props}>
       {children}
     </button>
   )
@@ -75,10 +76,11 @@ export function PrimaryButton({
 export function SecondaryButton({
   children,
   className = '',
+  type = 'button',
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type="button" className={`secondary-button ${className}`.trim()} {...props}>
+    <button type={type} className={`secondary-button ${className}`.trim()} {...props}>
       {children}
     </button>
   )
