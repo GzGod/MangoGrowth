@@ -86,5 +86,5 @@ export const POST = withX402(
       config: { description: `MangoGrowth 充值 ${order?.credits ?? ''} 积分` },
     }
   },
-  FACILITATOR_URL ? { url: FACILITATOR_URL } : undefined,
+  FACILITATOR_URL ? { url: FACILITATOR_URL as `${string}://${string}` } : undefined,
 )
