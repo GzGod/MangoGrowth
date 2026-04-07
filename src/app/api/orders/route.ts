@@ -2,7 +2,7 @@ import type { Prisma } from '@/generated/prisma/client'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { createSubscriptionPurchase } from '@/lib/billing/accounting'
+import { createPurchase } from '@/lib/billing/accounting'
 import { requireSessionUser, routeErrorResponse } from '@/lib/auth/request'
 import { db } from '@/lib/db'
 import { ensurePlanCatalog } from '@/lib/server/plans'
@@ -40,19 +40,17 @@ export async function POST(request: Request) {
     }
     const { planSlug } = parsed.data
 
-    const plan = await db.plan.findUnique({
-      where: { slug: planSlug },
-    })
+    const plan = await db.plan.findUnique({ where: { slug: planSlug } })
 
-    if (!plan || !plan.creditsCost) {
-      return NextResponse.json({ error: 'Plan is not purchasable with credits' }, { status: 400 })
+    if (!plan || !plan.isActive) {
+      return NextResponse.json({ error: 'Plan not found or inactive' }, { status: 400 })
     }
 
-    const creditsCost = plan.creditsCost
+    const usdCost = plan.usdCost ?? plan.priceUsd
 
-    const settlement = createSubscriptionPurchase({
-      currentBalance: user.creditBalance,
-      creditsCost,
+    const settlement = createPurchase({
+      currentBalance: user.usdBalance,
+      usdCost,
       amountUsd: plan.priceUsd,
       orderId: crypto.randomUUID(),
       planId: plan.id,
@@ -62,18 +60,16 @@ export async function POST(request: Request) {
     const order = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.user.update({
         where: { id: user.id },
-        data: {
-          creditBalance: settlement.nextBalance,
-        },
+        data: { usdBalance: settlement.nextBalance },
       })
 
-      await tx.creditTransaction.create({
+      await tx.transaction.create({
         data: {
           userId: user.id,
           amount: settlement.transaction.amount,
           balanceAfter: settlement.transaction.balanceAfter,
           type: 'PURCHASE',
-          description: `购买 ${plan.name}`,
+          description: settlement.transaction.description,
           referenceId: settlement.order.id,
         },
       })
@@ -86,8 +82,8 @@ export async function POST(request: Request) {
           type: plan.category === 'SUBSCRIPTION_PLAN' ? 'SUBSCRIPTION_PURCHASE' : 'SERVICE_PURCHASE',
           status: 'ACTIVE',
           amountUsd: plan.priceUsd,
-          creditsCost,
-          progress: plan.category === 'SERVICE_PLAN' ? 99 : 100,
+          usdCost,
+          progress: plan.category === 'SERVICE_PLAN' ? 0 : 100,
           completedAt: plan.category === 'SERVICE_PLAN' ? null : new Date(),
         },
         include: { plan: true },
@@ -112,7 +108,7 @@ export async function POST(request: Request) {
             type: 'FOLLOW',
             status: 'QUEUED',
             targetAccount: '@mango_growth_demo',
-            note: '系统默认任务，用于演示服务创建后的任务流转。',
+            note: '系统默认任务，等待管理员处理。',
           },
         })
       }
@@ -122,10 +118,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ order: serializeOrder(order) }, { status: 201 })
   } catch (error) {
-    if (error instanceof Error && error.message === 'Insufficient credits') {
+    if (error instanceof Error && error.message === 'Insufficient balance') {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
-
     return routeErrorResponse(error)
   }
 }

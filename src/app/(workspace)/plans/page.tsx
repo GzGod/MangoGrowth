@@ -24,10 +24,9 @@ type PlansResponse = {
     slug: string
     name: string
     description: string
-    category: 'CREDIT_PACK' | 'SERVICE_PLAN' | 'SUBSCRIPTION_PLAN'
+    category: 'SERVICE_PLAN' | 'SUBSCRIPTION_PLAN'
     priceUsd: number
-    creditsGranted: number | null
-    creditsCost: number | null
+    usdCost: number | null
     durationDays: number | null
     isFeatured: boolean
     features: string[]

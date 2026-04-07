@@ -12,7 +12,7 @@ type OrdersResponse = {
     id: string
     status: string
     amountUsd: number
-    creditsCost: number
+    usdCost: number
     progress: number
     createdAt: string
     plan: { name: string }
@@ -97,8 +97,7 @@ export default function OrdersPage() {
                 <th>状态</th>
                 <th>创建时间</th>
                 <th>进度</th>
-                <th>使用量 (PB)</th>
-                <th>预计剩余时间</th>
+                <th>金额 (USD)</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -112,9 +111,8 @@ export default function OrdersPage() {
                       <StatusPill>{resolveStatusLabel(order.status)}</StatusPill>
                     </td>
                     <td>{new Date(order.createdAt).toLocaleString('zh-CN')}</td>
-                    <td>{`${order.progress}% (${order.progress}/100)`}</td>
-                    <td>{order.creditsCost.toLocaleString()}</td>
-                    <td>0</td>
+                    <td>{`${order.progress}%`}</td>
+                    <td>${(order.usdCost / 100).toFixed(2)}</td>
                     <td>
                       <button type="button" className="orders-table__icon-button" aria-label={`查看订单 ${order.id}`}>
                         <Eye size={15} />
@@ -124,7 +122,7 @@ export default function OrdersPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="orders-table__empty">
+                  <td colSpan={7} className="orders-table__empty">
                     暂无订单记录
                   </td>
                 </tr>

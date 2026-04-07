@@ -6,7 +6,6 @@ import { db } from '@/lib/db'
 import { serializeRechargeOrder } from '@/lib/server/serializers'
 
 const rechargeSchema = z.object({
-  credits: z.number().int().positive().max(10_000_000),
   amountUsd: z.number().int().positive().max(100_000),
 })
 
@@ -34,12 +33,11 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
     }
-    const { credits, amountUsd } = parsed.data
+    const { amountUsd } = parsed.data
 
     const order = await db.rechargeOrder.create({
       data: {
         userId: user.id,
-        credits,
         amountUsd,
         status: 'PENDING',
         provider: 'x402',

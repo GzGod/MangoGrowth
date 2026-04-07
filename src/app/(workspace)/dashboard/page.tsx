@@ -15,13 +15,13 @@ type DashboardResponse = {
   metrics: {
     balance: number
     orderCount: number
-    spentCredits: number
+    spentUsd: number
   }
-  usage: Record<UsageRangeKey, Array<{ date: string; credits: number }>>
+  usage: Record<UsageRangeKey, Array<{ date: string; usd: number }>>
   orders: Array<{
     id: string
     status: string
-    creditsCost: number
+    usdCost: number
     progress: number
     createdAt: string
     plan: { name: string }
@@ -37,14 +37,14 @@ type DashboardResponse = {
 const onboarding = [
   {
     step: 'STEP 1',
-    title: '充值获取平台积分',
-    description: '充值资产获取平台积分，开启您的增长之旅',
+    title: '充值 USD 余额',
+    description: '充值 USDC 获取平台余额，开启您的增长之旅',
     icon: PlusCircle,
   },
   {
     step: 'STEP 2',
     title: '启动增长',
-    description: '消耗积分，增长粉丝、互动量，提高账号影响力',
+    description: '消耗余额，增长粉丝、互动量，提高账号影响力',
     icon: Rocket,
   },
 ] as const
@@ -54,7 +54,7 @@ export default function DashboardPage() {
   const [activeRange, setActiveRange] = useState<UsageRangeKey>('last7')
 
   const chartData = useMemo(() => data?.usage?.[activeRange] ?? [], [activeRange, data])
-  const chartCredits = useMemo(() => chartData.reduce((sum, item) => sum + item.credits, 0), [chartData])
+  const chartUsd = useMemo(() => chartData.reduce((sum, item) => sum + item.usd, 0), [chartData])
 
   return (
     <div className="page-stack page-stack--dashboard">
@@ -63,7 +63,6 @@ export default function DashboardPage() {
         <div className="grid-two dashboard-guide-grid">
           {onboarding.map((card) => {
             const Icon = card.icon
-
             return (
               <Panel key={card.title} className="guide-card guide-card--dashboard">
                 <div className="guide-card__icon">
@@ -84,9 +83,9 @@ export default function DashboardPage() {
       <section>
         <SectionTitle>概览</SectionTitle>
         <div className="grid-three dashboard-metrics-grid">
-          <StatCard label="我的积分" value={loading ? '...' : data?.metrics.balance.toLocaleString() ?? '0'} icon={CircleDollarSign} />
+          <StatCard label="USD 余额" value={loading ? '...' : `$${((data?.metrics.balance ?? 0) / 100).toFixed(2)}`} icon={CircleDollarSign} />
           <StatCard label="订单总数" value={loading ? '...' : data?.metrics.orderCount ?? 0} icon={FolderKanban} />
-          <StatCard label="花费积分总数" value={loading ? '...' : data?.metrics.spentCredits.toLocaleString() ?? '0'} icon={WalletCards} />
+          <StatCard label="累计消费" value={loading ? '...' : `$${((data?.metrics.spentUsd ?? 0) / 100).toFixed(2)}`} icon={WalletCards} />
         </div>
       </section>
 
@@ -128,7 +127,7 @@ export default function DashboardPage() {
         <div className="chart-card__header">
           <div>
             <h3>使用量</h3>
-            <p>({chartCredits.toLocaleString()} Credits)</p>
+            <p>(${(chartUsd / 100).toFixed(2)} USD)</p>
           </div>
           <div className="chart-card__ranges">
             {usageRanges.map((range) => (
@@ -157,15 +156,14 @@ export default function DashboardPage() {
           </Link>
         </div>
         <TableShell
-          columns={['订单 ID', '订单状态', '订单名称', '创建时间', '进度', '使用量 (Credits)', '预计剩余时间']}
+          columns={['订单 ID', '订单状态', '订单名称', '创建时间', '进度', '金额 (USD)']}
           rows={(data?.orders ?? []).slice(0, 5).map((order) => [
             order.id,
             <StatusPill key={`${order.id}-status`}>{order.status}</StatusPill>,
             order.plan.name,
             new Date(order.createdAt).toLocaleString('zh-CN'),
-            `${order.progress}% (${order.progress}/100)`,
-            order.creditsCost.toLocaleString(),
-            '0',
+            `${order.progress}%`,
+            `$${(order.usdCost / 100).toFixed(2)}`,
           ])}
           emptyText="还没有订单，先去套餐页购买一个方案。"
         />

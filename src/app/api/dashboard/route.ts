@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { requireSessionUser, routeErrorResponse } from '@/lib/auth/request'
 import { getDashboardSnapshot } from '@/lib/server/reports'
 import {
-  serializeCreditTransaction,
+  serializeTransaction,
   serializeOrder,
   serializeRechargeOrder,
   serializeSubscription,
@@ -22,13 +22,13 @@ export async function GET(request: Request) {
       metrics: {
         balance: snapshot.balance,
         orderCount: snapshot.orderCount,
-        spentCredits: snapshot.spentCredits,
+        spentUsd: snapshot.spentUsd,
       },
       usage: snapshot.usage,
       orders: snapshot.orders.map((order: DashboardOrderRecord) => serializeOrder(order)),
       rechargeOrders: snapshot.rechargeOrders.map((order: DashboardRechargeRecord) => serializeRechargeOrder(order)),
-      subscriptions: snapshot.subscriptions.map((subscription: DashboardSubscriptionRecord) => serializeSubscription(subscription)),
-      transactions: snapshot.transactions.map((transaction: DashboardTransactionRecord) => serializeCreditTransaction(transaction)),
+      subscriptions: snapshot.subscriptions.map((sub: DashboardSubscriptionRecord) => serializeSubscription(sub)),
+      transactions: snapshot.transactions.map((t: DashboardTransactionRecord) => serializeTransaction(t)),
     })
   } catch (error) {
     return routeErrorResponse(error)

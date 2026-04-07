@@ -24,16 +24,16 @@ export async function POST(request: Request) {
     }
 
     const amount = body.amount
-    const nextBalance = user.creditBalance + amount
+    const nextBalance = user.usdBalance + amount
 
     const [, updatedUser] = await db.$transaction([
-      db.creditTransaction.create({
+      db.transaction.create({
         data: {
           userId: user.id,
           type: 'MANUAL_ADJUST',
           amount,
           balanceAfter: nextBalance,
-          description: body.reason ?? '管理员调整积分',
+          description: body.reason ?? '管理员调整余额',
           metadata: {
             actorAdminId: admin.id,
             actorAdminUsername: admin.username,
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       }),
       db.user.update({
         where: { id: user.id },
-        data: { creditBalance: nextBalance },
+        data: { usdBalance: nextBalance },
       }),
     ])
 

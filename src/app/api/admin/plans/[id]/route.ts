@@ -9,8 +9,8 @@ const patchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().min(1).max(1000).optional(),
   priceUsd: z.number().int().min(0).optional(),
-  creditsCost: z.number().int().min(0).optional(),
-  creditsGranted: z.number().int().min(0).optional(),
+  usdCost: z.number().int().min(0).optional(),
+
   durationDays: z.number().int().min(1).optional(),
   isFeatured: z.boolean().optional(),
   isActive: z.boolean().optional(),

@@ -327,15 +327,15 @@ export default function ServicesPage() {
             <div className="services-summary-bar__stats">
               <div>
                 <span>可用</span>
-                <strong>{(user?.creditBalance ?? 0).toLocaleString()} 积分</strong>
+                <strong>${((user?.usdBalance ?? 0) / 100).toFixed(2)}</strong>
               </div>
               <div>
                 <span>预计费用</span>
-                <strong>{summary.expected.toLocaleString()} 积分</strong>
+                <strong>${(summary.expected / 100).toFixed(2)}</strong>
               </div>
               <div>
                 <span>剩余</span>
-                <strong className="is-positive">{((user?.creditBalance ?? 0) - summary.expected).toLocaleString()} 积分</strong>
+                <strong className="is-positive">${(((user?.usdBalance ?? 0) - summary.expected) / 100).toFixed(2)}</strong>
               </div>
             </div>
 

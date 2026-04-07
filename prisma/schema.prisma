@@ -19,7 +19,7 @@ enum PlanCategory {
   SUBSCRIPTION_PLAN
 }
 
-enum CreditTransactionType {
+enum TransactionType {
   RECHARGE
   PURCHASE
   MANUAL_ADJUST
@@ -75,13 +75,13 @@ model User {
   name               String?
   avatarUrl          String?
   role               Role                @default(USER)
-  creditBalance      Int                 @default(0)
+  usdBalance         Int                 @default(0)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   rechargeOrders     RechargeOrder[]
   orders             Order[]
   subscriptions      Subscription[]
-  creditTransactions CreditTransaction[]
+  transactions       Transaction[]
   serviceTasks       ServiceTask[]
 }
 
@@ -103,8 +103,7 @@ model Plan {
   description    String
   category       PlanCategory
   priceUsd       Int
-  creditsGranted Int?
-  creditsCost    Int?
+  usdCost        Int?
   durationDays   Int?
   isFeatured     Boolean         @default(false)
   isActive       Boolean         @default(true)
@@ -119,7 +118,6 @@ model Plan {
 model RechargeOrder {
   id           String              @id @default(cuid())
   userId       String
-  credits      Int
   amountUsd    Int
   status       RechargeOrderStatus @default(PENDING)
   provider     String?
@@ -133,17 +131,17 @@ model RechargeOrder {
   @@index([userId, status])
 }
 
-model CreditTransaction {
-  id           String                @id @default(cuid())
+model Transaction {
+  id           String          @id @default(cuid())
   userId       String
-  type         CreditTransactionType
+  type         TransactionType
   amount       Int
   balanceAfter Int
   description  String
   referenceId  String?
   metadata     Json?
-  createdAt    DateTime              @default(now())
-  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime        @default(now())
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
 }
@@ -155,7 +153,7 @@ model Order {
   type        OrderType
   status      OrderStatus @default(PENDING)
   amountUsd   Int
-  creditsCost Int
+  usdCost     Int
   progress    Int         @default(0)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt

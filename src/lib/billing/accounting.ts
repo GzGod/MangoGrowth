@@ -1,14 +1,13 @@
 type RechargeSettlementInput = {
   currentBalance: number
-  credits: number
   amountUsd: number
   rechargeOrderId: string
   userId: string
 }
 
-type SubscriptionPurchaseInput = {
+type PurchaseInput = {
   currentBalance: number
-  creditsCost: number
+  usdCost: number
   amountUsd: number
   orderId: string
   planId: string
@@ -16,33 +15,33 @@ type SubscriptionPurchaseInput = {
 }
 
 export function createRechargeSettlement(input: RechargeSettlementInput) {
-  const nextBalance = input.currentBalance + input.credits
+  const nextBalance = input.currentBalance + input.amountUsd
 
   return {
     nextBalance,
     rechargeOrder: {
       id: input.rechargeOrderId,
       userId: input.userId,
-      credits: input.credits,
       amountUsd: input.amountUsd,
       status: 'paid' as const,
     },
     transaction: {
       userId: input.userId,
-      amount: input.credits,
+      amount: input.amountUsd,
       balanceAfter: nextBalance,
-      type: 'recharge' as const,
+      type: 'RECHARGE' as const,
       referenceId: input.rechargeOrderId,
+      description: `Recharge $${(input.amountUsd / 100).toFixed(2)}`,
     },
   }
 }
 
-export function createSubscriptionPurchase(input: SubscriptionPurchaseInput) {
-  if (input.currentBalance < input.creditsCost) {
-    throw new Error('Insufficient credits')
+export function createPurchase(input: PurchaseInput) {
+  if (input.currentBalance < input.usdCost) {
+    throw new Error('Insufficient balance')
   }
 
-  const nextBalance = input.currentBalance - input.creditsCost
+  const nextBalance = input.currentBalance - input.usdCost
 
   return {
     nextBalance,
@@ -51,15 +50,16 @@ export function createSubscriptionPurchase(input: SubscriptionPurchaseInput) {
       userId: input.userId,
       planId: input.planId,
       amountUsd: input.amountUsd,
-      creditsCost: input.creditsCost,
+      usdCost: input.usdCost,
       status: 'active' as const,
     },
     transaction: {
       userId: input.userId,
-      amount: -input.creditsCost,
+      amount: -input.usdCost,
       balanceAfter: nextBalance,
-      type: 'purchase' as const,
+      type: 'PURCHASE' as const,
       referenceId: input.orderId,
+      description: `Purchase order ${input.orderId}`,
     },
   }
 }

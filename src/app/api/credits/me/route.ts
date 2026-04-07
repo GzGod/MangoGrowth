@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   try {
     const user = await requireSessionUser(request)
     return NextResponse.json({
-      balance: user.creditBalance,
+      balance: user.usdBalance,
       role: user.role,
     })
   } catch (error) {

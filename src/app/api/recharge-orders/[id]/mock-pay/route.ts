@@ -27,8 +27,7 @@ export async function POST(request: Request, context: Context) {
     }
 
     const settlement = createRechargeSettlement({
-      currentBalance: user.creditBalance,
-      credits: rechargeOrder.credits,
+      currentBalance: user.usdBalance,
       amountUsd: rechargeOrder.amountUsd,
       rechargeOrderId: rechargeOrder.id,
       userId: user.id,
@@ -37,26 +36,23 @@ export async function POST(request: Request, context: Context) {
     const updatedOrder = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.user.update({
         where: { id: user.id },
-        data: { creditBalance: settlement.nextBalance },
+        data: { usdBalance: settlement.nextBalance },
       })
 
-      await tx.creditTransaction.create({
+      await tx.transaction.create({
         data: {
           userId: user.id,
           amount: settlement.transaction.amount,
           balanceAfter: settlement.transaction.balanceAfter,
           type: 'RECHARGE',
-          description: `充值 ${rechargeOrder.credits} 积分`,
+          description: settlement.transaction.description,
           referenceId: rechargeOrder.id,
         },
       })
 
       return tx.rechargeOrder.update({
         where: { id: rechargeOrder.id },
-        data: {
-          status: 'PAID',
-          paidAt: new Date(),
-        },
+        data: { status: 'PAID', paidAt: new Date() },
       })
     })
 

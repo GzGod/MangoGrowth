@@ -33,8 +33,7 @@ async function payHandler(request: NextRequest, context: Context): Promise<NextR
     }
 
     const settlement = createRechargeSettlement({
-      currentBalance: user.creditBalance,
-      credits: rechargeOrder.credits,
+      currentBalance: user.usdBalance,
       amountUsd: rechargeOrder.amountUsd,
       rechargeOrderId: rechargeOrder.id,
       userId: user.id,
@@ -43,16 +42,16 @@ async function payHandler(request: NextRequest, context: Context): Promise<NextR
     const updatedOrder = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.user.update({
         where: { id: user.id },
-        data: { creditBalance: settlement.nextBalance },
+        data: { usdBalance: settlement.nextBalance },
       })
 
-      await tx.creditTransaction.create({
+      await tx.transaction.create({
         data: {
           userId: user.id,
           amount: settlement.transaction.amount,
           balanceAfter: settlement.transaction.balanceAfter,
           type: 'RECHARGE',
-          description: `充值 ${rechargeOrder.credits} 积分`,
+          description: settlement.transaction.description,
           referenceId: rechargeOrder.id,
         },
       })
@@ -70,9 +69,6 @@ async function payHandler(request: NextRequest, context: Context): Promise<NextR
   }
 }
 
-// withX402 wraps the handler: requires X-PAYMENT header with USDC payment,
-// verifies and settles on-chain before calling payHandler.
-// Price is dynamic per order — use a function to read amountUsd from the DB.
 export const POST = withX402(
   payHandler as (request: NextRequest) => Promise<NextResponse>,
   PAYMENT_ADDRESS,
@@ -83,7 +79,7 @@ export const POST = withX402(
     return {
       price: `$${priceUsd}` as `$${number}`,
       network: NETWORK,
-      config: { description: `MangoGrowth 充值 ${order?.credits ?? ''} 积分` },
+      config: { description: `MangoGrowth 充值 $${(priceUsd / 100).toFixed(2)}` },
     }
   },
   FACILITATOR_URL ? { url: FACILITATOR_URL as `${string}://${string}` } : undefined,

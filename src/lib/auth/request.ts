@@ -30,7 +30,7 @@ export type SessionUser = {
   name: string | null
   avatarUrl: string | null
   role: 'USER' | 'ADMIN'
-  creditBalance: number
+  usdBalance: number
 }
 
 function extractIdentityToken(request: Request) {
@@ -89,7 +89,7 @@ export async function requireSessionUser(request: Request): Promise<SessionUser>
       name: true,
       avatarUrl: true,
       role: true,
-      creditBalance: true,
+      usdBalance: true,
     },
   })
 

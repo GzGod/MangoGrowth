@@ -14,7 +14,7 @@ type LocalUser = {
   name: string | null
   avatarUrl: string | null
   role: 'USER' | 'ADMIN'
-  creditBalance: number
+  usdBalance: number
 }
 
 type SessionContextValue = {

@@ -37,7 +37,7 @@ export function buildUsageSeries(transactions: UsageTransaction[], days: number,
     const day = end - offset * 24 * 60 * 60 * 1000
     series.push({
       date: formatUsageLabel(day),
-      credits: buckets.get(day) ?? 0,
+      usd: buckets.get(day) ?? 0,
     })
   }
 
@@ -48,9 +48,7 @@ export async function getDashboardSnapshot(userId: string) {
   const [user, orders, rechargeOrders, subscriptions, transactions] = await Promise.all([
     db.user.findUniqueOrThrow({
       where: { id: userId },
-      select: {
-        creditBalance: true,
-      },
+      select: { usdBalance: true },
     }),
     db.order.findMany({
       where: { userId },
@@ -68,7 +66,7 @@ export async function getDashboardSnapshot(userId: string) {
       include: { plan: true },
       orderBy: { createdAt: 'desc' },
     }),
-    db.creditTransaction.findMany({
+    db.transaction.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       take: 20,
@@ -76,14 +74,14 @@ export async function getDashboardSnapshot(userId: string) {
   ])
   type TransactionRecord = (typeof transactions)[number]
 
-  const spentCredits = transactions
-    .filter((transaction: TransactionRecord) => transaction.amount < 0)
-    .reduce((sum: number, transaction: TransactionRecord) => sum + Math.abs(transaction.amount), 0)
+  const spentUsd = transactions
+    .filter((t: TransactionRecord) => t.amount < 0)
+    .reduce((sum: number, t: TransactionRecord) => sum + Math.abs(t.amount), 0)
 
   return {
-    balance: user.creditBalance,
+    balance: user.usdBalance,
     orderCount: orders.length,
-    spentCredits,
+    spentUsd,
     usage: {
       last7: buildUsageSeries(transactions, 7),
       last30: buildUsageSeries(transactions, 30),

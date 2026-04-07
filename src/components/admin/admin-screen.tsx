@@ -11,7 +11,7 @@ type AdminUsersResponse = {
     id: string
     email: string | null
     role: string
-    creditBalance: number
+    usdBalance: number
     createdAt: string
   }>
 }
@@ -31,7 +31,7 @@ type AdminOrder = {
   type: string
   status: string
   amountUsd: number
-  creditsCost: number
+  usdCost: number
   progress: number
   createdAt: string
   completedAt: string | null
@@ -47,7 +47,6 @@ type AdminOrdersResponse = {
 type AdminRechargeOrdersResponse = {
   rechargeOrders: Array<{
     id: string
-    credits: number
     amountUsd: number
     status: string
     createdAt: string
@@ -82,7 +81,7 @@ type AdminPlan = {
   description: string
   category: string
   priceUsd: number
-  creditsCost: number | null
+  usdCost: number | null
   durationDays: number | null
   isFeatured: boolean
   isActive: boolean
@@ -111,7 +110,7 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
-const PLAN_CATEGORIES = ['SERVICE_PLAN', 'SUBSCRIPTION_PLAN', 'CREDIT_PACK'] as const
+const PLAN_CATEGORIES = ['SERVICE_PLAN', 'SUBSCRIPTION_PLAN'] as const
 
 const ORDER_STATUSES = ['PENDING', 'PAID', 'ACTIVE', 'COMPLETED', 'CANCELED'] as const
 
@@ -121,7 +120,7 @@ const EMPTY_PLAN_FORM = {
   description: '',
   category: 'SERVICE_PLAN' as string,
   priceUsd: 0,
-  creditsCost: 0,
+  usdCost: 0,
   durationDays: '',
   isFeatured: false,
   features: '',
@@ -144,7 +143,7 @@ function PlanFormPanel({
           description: initial.description,
           category: initial.category,
           priceUsd: initial.priceUsd,
-          creditsCost: initial.creditsCost ?? 0,
+          usdCost: initial.usdCost ?? 0,
           durationDays: initial.durationDays ? String(initial.durationDays) : '',
           isFeatured: initial.isFeatured,
           features: initial.features.join('\n'),
@@ -167,7 +166,7 @@ function PlanFormPanel({
         description: form.description,
         category: form.category,
         priceUsd: Number(form.priceUsd),
-        creditsCost: Number(form.creditsCost),
+        usdCost: Number(form.usdCost),
         durationDays: form.durationDays ? Number(form.durationDays) : undefined,
         isFeatured: form.isFeatured,
         features: form.features.split('\n').map((s) => s.trim()).filter(Boolean),
@@ -207,8 +206,8 @@ function PlanFormPanel({
           <input type="number" min={0} value={form.priceUsd} onChange={(e) => set('priceUsd', e.target.value)} />
         </label>
         <label className="field">
-          <span>积分消耗</span>
-          <input type="number" min={0} value={form.creditsCost} onChange={(e) => set('creditsCost', e.target.value)} />
+          <span>USD 消耗</span>
+          <input type="number" min={0} value={form.usdCost} onChange={(e) => set('usdCost', e.target.value)} />
         </label>
         <label className="field">
           <span>有效天数（订阅填 30，一次性留空）</span>
@@ -285,7 +284,7 @@ function OrderDetailRow({
               <p><span>套餐名</span><strong>{order.plan.name}</strong></p>
               <p><span>类型</span><strong>{order.type}</strong></p>
               <p><span>金额</span><strong>${order.amountUsd}</strong></p>
-              <p><span>积分消耗</span><strong>{order.creditsCost.toLocaleString()}</strong></p>
+              <p><span>USD 消耗</span><strong>${(order.usdCost / 100).toFixed(2)}</strong></p>
             </div>
             <div className="order-detail-section">
               <h5>更新状态</h5>
@@ -421,7 +420,7 @@ export function AdminScreen({
     await refetchPlans()
   }
 
-  const ORDER_COLUMNS = ['订单 ID', '下单用户', '订单名称', '状态', '积分消耗', '金额', '创建时间', '']
+  const ORDER_COLUMNS = ['订单 ID', '下单用户', '订单名称', '状态', 'USD 消耗', '金额', '创建时间', '']
 
   return (
     <div className="page-stack page-stack--admin">
@@ -523,12 +522,12 @@ export function AdminScreen({
           </div>
         </div>
         <TableShell
-          columns={['用户 ID', '邮箱', '角色', '积分', '注册时间']}
+          columns={['用户 ID', '邮箱', '角色', 'USD 余额', '注册时间']}
           rows={users.map((user) => [
             user.id,
             user.email ?? '未绑定邮箱',
             <StatusPill key={`${user.id}-role`}>{user.role}</StatusPill>,
-            user.creditBalance.toLocaleString(),
+            `$${(user.usdBalance / 100).toFixed(2)}`,
             new Date(user.createdAt).toLocaleString('zh-CN'),
           ])}
           emptyText="暂时没有用户数据。"
@@ -561,8 +560,8 @@ export function AdminScreen({
                     <td>{order.user?.email ?? '未知用户'}</td>
                     <td>{order.plan.name}</td>
                     <td><StatusPill>{order.status}</StatusPill></td>
-                    <td>{order.creditsCost.toLocaleString()}</td>
-                    <td>${order.amountUsd}</td>
+                    <td>${(order.usdCost / 100).toFixed(2)}</td>
+                    <td>${(order.amountUsd / 100).toFixed(2)}</td>
                     <td>{new Date(order.createdAt).toLocaleString('zh-CN')}</td>
                     <td>
                       <button
@@ -613,7 +612,7 @@ export function AdminScreen({
               <th>名称</th>
               <th>类型</th>
               <th>价格</th>
-              <th>积分消耗</th>
+              <th>USD 消耗</th>
               <th>热门</th>
               <th>状态</th>
               <th>操作</th>
@@ -627,8 +626,8 @@ export function AdminScreen({
                 <tr key={plan.id}>
                   <td>{plan.name}</td>
                   <td><StatusPill>{plan.category}</StatusPill></td>
-                  <td>${plan.priceUsd}</td>
-                  <td>{plan.creditsCost?.toLocaleString() ?? '-'}</td>
+                  <td>${(plan.priceUsd / 100).toFixed(2)}</td>
+                  <td>${((plan.usdCost ?? 0) / 100).toFixed(2)}</td>
                   <td>{plan.isFeatured ? '✓' : '-'}</td>
                   <td><StatusPill>{plan.isActive ? 'ACTIVE' : 'INACTIVE'}</StatusPill></td>
                   <td className="admin-plan-actions">
@@ -673,12 +672,11 @@ export function AdminScreen({
           </div>
         </div>
         <TableShell
-          columns={['充值单 ID', '用户', '积分', '金额', '状态', '创建时间']}
+          columns={['充值单 ID', '用户', '金额', '状态', '创建时间']}
           rows={rechargeOrders.map((order) => [
             order.id,
             order.user?.email ?? '未知用户',
-            order.credits.toLocaleString(),
-            `$${order.amountUsd}`,
+            `$${(order.amountUsd / 100).toFixed(2)}`,
             <StatusPill key={`${order.id}-status`}>{order.status}</StatusPill>,
             new Date(order.createdAt).toLocaleString('zh-CN'),
           ])}

@@ -32,10 +32,10 @@ import { useSession } from '@/components/providers/session-provider'
 import { resolveDisplayIdentity } from '@/lib/auth/identity'
 
 const RECHARGE_OPTIONS = [
-  { credits: 100, amountUsd: 10 },
-  { credits: 500, amountUsd: 45 },
-  { credits: 1000, amountUsd: 80 },
-  { credits: 5000, amountUsd: 350 },
+  { label: '$10', amountUsd: 10 },
+  { label: '$45', amountUsd: 45 },
+  { label: '$80', amountUsd: 80 },
+  { label: '$350', amountUsd: 350 },
 ]
 
 const navigation = [
@@ -115,7 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const createRes = await fetch('/api/recharge-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${identityToken}` },
-        body: JSON.stringify({ credits: selectedOption.credits, amountUsd: selectedOption.amountUsd }),
+        body: JSON.stringify({ amountUsd: selectedOption.amountUsd }),
       })
       if (!createRes.ok) throw new Error('创建充值订单失败')
       const { rechargeOrder } = (await createRes.json()) as { rechargeOrder: { id: string } }
@@ -252,9 +252,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="sidebar__balance">
-            <span className="sidebar__balance-label">积分余额</span>
+            <span className="sidebar__balance-label">USD 余额</span>
             <div className="sidebar__balance-row">
-              <strong>{user?.creditBalance.toLocaleString() ?? '0'}</strong>
+              <strong>${((user?.usdBalance ?? 0) / 100).toFixed(2)}</strong>
               <button
                 type="button"
                 className="sidebar__circle-button"
@@ -416,12 +416,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="modal-overlay" onClick={closeRechargeModal}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-box__header">
-              <h3>充值积分</h3>
+              <h3>充值余额</h3>
               <button type="button" onClick={closeRechargeModal} aria-label="关闭"><X size={16} /></button>
             </div>
             {rechargeStatus === 'success' ? (
               <div className="modal-box__success">
-                <p>充值成功！积分已到账。</p>
+                <p>充值成功！余额已到账。</p>
                 <button type="button" className="modal-box__close-btn" onClick={closeRechargeModal}>关闭</button>
               </div>
             ) : (
@@ -430,13 +430,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="recharge-options">
                   {RECHARGE_OPTIONS.map((opt) => (
                     <button
-                      key={opt.credits}
+                      key={opt.amountUsd}
                       type="button"
-                      className={`recharge-option${selectedOption?.credits === opt.credits ? ' is-selected' : ''}`}
+                      className={`recharge-option${selectedOption?.amountUsd === opt.amountUsd ? ' is-selected' : ''}`}
                       onClick={() => setSelectedOption(opt)}
                     >
-                      <strong>{opt.credits.toLocaleString()} 积分</strong>
-                      <span>${opt.amountUsd} USDC</span>
+                      <strong>{opt.label}</strong>
+                      <span>USDC</span>
                     </button>
                   ))}
                 </div>

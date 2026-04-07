@@ -14,7 +14,7 @@ export async function GET(request: Request) {
         email: true,
         name: true,
         role: true,
-        creditBalance: true,
+        usdBalance: true,
         createdAt: true,
       },
     })

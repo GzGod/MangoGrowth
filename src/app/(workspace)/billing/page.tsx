@@ -19,12 +19,11 @@ type DashboardResponse = {
   metrics: {
     balance: number
     orderCount: number
-    spentCredits: number
+    spentUsd: number
   }
-  usage: Record<UsageRangeKey, Array<{ date: string; credits: number }>>
+  usage: Record<UsageRangeKey, Array<{ date: string; usd: number }>>
   rechargeOrders: Array<{
     id: string
-    credits: number
     amountUsd: number
     status: string
     createdAt: string
@@ -40,10 +39,10 @@ type DashboardResponse = {
 }
 
 const RECHARGE_OPTIONS = [
-  { credits: 100, amountUsd: 10 },
-  { credits: 500, amountUsd: 45 },
-  { credits: 1000, amountUsd: 80 },
-  { credits: 5000, amountUsd: 350 },
+  { label: '$10', amountUsd: 10 },
+  { label: '$45', amountUsd: 45 },
+  { label: '$80', amountUsd: 80 },
+  { label: '$350', amountUsd: 350 },
 ]
 
 const paymentTabs: Array<{ key: PaymentTab; label: string }> = [
@@ -71,16 +70,14 @@ export default function BillingPage() {
     setRechargeStatus('loading')
     setRechargeError(null)
     try {
-      // Step 1: create recharge order
       const createRes = await fetch('/api/recharge-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${identityToken}` },
-        body: JSON.stringify({ credits: selectedOption.credits, amountUsd: selectedOption.amountUsd }),
+        body: JSON.stringify({ amountUsd: selectedOption.amountUsd }),
       })
       if (!createRes.ok) throw new Error('创建充值订单失败')
       const { rechargeOrder } = (await createRes.json()) as { rechargeOrder: { id: string } }
 
-      // Step 2: pay with x402 — Privy handles 402 → sign → retry automatically
       const payFetch = wrapFetchWithPayment({ walletAddress: embeddedWallet.address, fetch })
       const payRes = await payFetch(`/api/recharge-orders/${rechargeOrder.id}/pay`, {
         method: 'POST',
@@ -108,7 +105,7 @@ export default function BillingPage() {
   }
 
   const chartData = useMemo(() => data?.usage?.[activeRange] ?? [], [activeRange, data])
-  const chartCredits = useMemo(() => chartData.reduce((sum, item) => sum + item.credits, 0), [chartData])
+  const chartUsd = useMemo(() => chartData.reduce((sum, item) => sum + item.usd, 0), [chartData])
   const displayIdentity = resolveDisplayIdentity(user, authIdentity, isAuthenticated)
 
   const paymentRows =
@@ -116,11 +113,9 @@ export default function BillingPage() {
       ? (data?.rechargeOrders ?? []).map((order) => [
           order.id,
           <StatusPill key={`${order.id}-status`}>{order.status}</StatusPill>,
-          order.credits.toLocaleString(),
-          '$' + order.amountUsd,
-          'USDT',
+          `$${(order.amountUsd / 100).toFixed(2)}`,
+          'USDC',
           new Date(order.createdAt).toLocaleString('zh-CN'),
-          '-',
         ])
       : []
 
@@ -128,8 +123,7 @@ export default function BillingPage() {
     transaction.description,
     new Date(transaction.createdAt).toLocaleString('zh-CN'),
     <span key={`${transaction.id}-amount`} className={transaction.amount > 0 ? 'billing-value billing-value--positive' : 'billing-value billing-value--negative'}>
-      {transaction.amount > 0 ? '+' : ''}
-      {transaction.amount.toLocaleString()}
+      {transaction.amount > 0 ? '+' : ''}${(transaction.amount / 100).toFixed(2)}
     </span>,
   ])
 
@@ -139,12 +133,12 @@ export default function BillingPage() {
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-box__header">
-              <h3>充值积分</h3>
+              <h3>充值余额</h3>
               <button type="button" onClick={closeModal} aria-label="关闭"><X size={16} /></button>
             </div>
             {rechargeStatus === 'success' ? (
               <div className="modal-box__success">
-                <p>充值成功！积分已到账。</p>
+                <p>充值成功！余额已到账。</p>
                 <PrimaryButton onClick={closeModal}>关闭</PrimaryButton>
               </div>
             ) : (
@@ -153,13 +147,13 @@ export default function BillingPage() {
                 <div className="recharge-options">
                   {RECHARGE_OPTIONS.map((opt) => (
                     <button
-                      key={opt.credits}
+                      key={opt.amountUsd}
                       type="button"
-                      className={`recharge-option${selectedOption?.credits === opt.credits ? ' is-selected' : ''}`}
+                      className={`recharge-option${selectedOption?.amountUsd === opt.amountUsd ? ' is-selected' : ''}`}
                       onClick={() => setSelectedOption(opt)}
                     >
-                      <strong>{opt.credits.toLocaleString()} 积分</strong>
-                      <span>${opt.amountUsd} USDC</span>
+                      <strong>{opt.label}</strong>
+                      <span>USDC</span>
                     </button>
                   ))}
                 </div>
@@ -201,8 +195,8 @@ export default function BillingPage() {
           </div>
         </Panel>
 
-        <StatCard label="我的积分" value={data?.metrics.balance.toLocaleString() ?? '0'} icon={CircleDollarSign} />
-        <StatCard label="花费积分总数" value={data?.metrics.spentCredits.toLocaleString() ?? '0'} icon={WalletCards} />
+        <StatCard label="USD 余额" value={`$${((data?.metrics.balance ?? 0) / 100).toFixed(2)}`} icon={CircleDollarSign} />
+        <StatCard label="累计消费" value={`$${((data?.metrics.spentUsd ?? 0) / 100).toFixed(2)}`} icon={WalletCards} />
       </div>
 
       <section>
@@ -223,7 +217,7 @@ export default function BillingPage() {
         <div className="chart-card__header">
           <div>
             <h3>使用量</h3>
-            <p>({chartCredits.toLocaleString()} Credits)</p>
+            <p>(${(chartUsd / 100).toFixed(2)} USD)</p>
           </div>
           <div className="chart-card__ranges">
             {usageRanges.map((range) => (
@@ -266,10 +260,10 @@ export default function BillingPage() {
         </div>
 
         <div className="billing-table-actions">
-          <PrimaryButton onClick={() => setShowRechargeModal(true)}>充值积分</PrimaryButton>
+          <PrimaryButton onClick={() => setShowRechargeModal(true)}>充值余额</PrimaryButton>
         </div>
         <TableShell
-          columns={['订单 ID', '状态', '积分', '金额', '代币', '创建时间', '操作']}
+          columns={['订单 ID', '状态', '金额', '代币', '创建时间']}
           rows={paymentRows}
           emptyText="当前分类下还没有支付订单。"
         />
@@ -278,18 +272,18 @@ export default function BillingPage() {
       <Panel className="billing-section-panel">
         <div className="panel-heading billing-section-heading">
           <div>
-            <h3>任务消耗</h3>
-            <p>显示增长任务消耗的积分记录（20 条）</p>
+            <h3>交易记录</h3>
+            <p>显示最近 20 条余额变动记录</p>
           </div>
-          <button type="button" className="billing-refresh-button" aria-label="刷新任务消耗">
+          <button type="button" className="billing-refresh-button" aria-label="刷新交易记录">
             <CreditCard size={14} />
           </button>
         </div>
 
         <TableShell
-          columns={['详情说明', '日期', '积分变化 (Credits)']}
+          columns={['详情说明', '日期', '金额变化 (USD)']}
           rows={consumptionRows}
-          emptyText="还没有任务消耗记录。"
+          emptyText="还没有交易记录。"
         />
       </Panel>
     </div>

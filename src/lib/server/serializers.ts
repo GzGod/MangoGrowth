@@ -5,8 +5,7 @@ type PlanLike = {
   description: string
   category: string
   priceUsd: number
-  creditsGranted: number | null
-  creditsCost: number | null
+  usdCost: number | null
   durationDays: number | null
   isFeatured: boolean
   features: unknown
@@ -23,7 +22,7 @@ type OrderLike = {
   id: string
   status: string
   amountUsd: number
-  creditsCost: number
+  usdCost: number
   progress: number
   createdAt: Date
   completedAt: Date | null
@@ -33,7 +32,6 @@ type OrderLike = {
 
 type RechargeOrderLike = {
   id: string
-  credits: number
   amountUsd: number
   status: string
   createdAt: Date
@@ -41,7 +39,7 @@ type RechargeOrderLike = {
   user?: UserLike | null
 }
 
-type CreditTransactionLike = {
+type TransactionLike = {
   id: string
   type: string
   amount: number
@@ -77,8 +75,7 @@ export function serializePlan(plan: PlanLike) {
     description: plan.description,
     category: plan.category,
     priceUsd: plan.priceUsd,
-    creditsGranted: plan.creditsGranted,
-    creditsCost: plan.creditsCost,
+    usdCost: plan.usdCost,
     durationDays: plan.durationDays,
     isFeatured: plan.isFeatured,
     features: Array.isArray(plan.features) ? plan.features : [],
@@ -90,7 +87,7 @@ export function serializeOrder(order: OrderLike) {
     id: order.id,
     status: order.status,
     amountUsd: order.amountUsd,
-    creditsCost: order.creditsCost,
+    usdCost: order.usdCost,
     progress: order.progress,
     createdAt: order.createdAt.toISOString(),
     completedAt: order.completedAt?.toISOString() ?? null,
@@ -109,7 +106,6 @@ export function serializeOrder(order: OrderLike) {
 export function serializeRechargeOrder(order: RechargeOrderLike) {
   return {
     id: order.id,
-    credits: order.credits,
     amountUsd: order.amountUsd,
     status: order.status,
     createdAt: order.createdAt.toISOString(),
@@ -125,7 +121,7 @@ export function serializeRechargeOrder(order: RechargeOrderLike) {
   }
 }
 
-export function serializeCreditTransaction(transaction: CreditTransactionLike) {
+export function serializeTransaction(transaction: TransactionLike) {
   return {
     id: transaction.id,
     type: transaction.type,
