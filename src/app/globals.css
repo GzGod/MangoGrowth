@@ -2325,7 +2325,8 @@ textarea {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2333,13 +2334,14 @@ textarea {
 }
 
 .modal-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: #ffffff;
+  color: #111111;
+  border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 24px;
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.24);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -2355,13 +2357,14 @@ textarea {
   font-size: 16px;
   font-weight: 600;
   margin: 0;
+  color: #111111;
 }
 
 .modal-box__header button {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-secondary);
+  color: #666666;
   padding: 4px;
   border-radius: 6px;
   display: flex;
@@ -2369,18 +2372,18 @@ textarea {
 }
 
 .modal-box__header button:hover {
-  background: var(--surface-hover);
+  background: #f3f4f6;
 }
 
 .modal-box__desc {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: #555555;
   margin: 0;
 }
 
 .modal-box__error {
   font-size: 13px;
-  color: var(--color-error, #e53e3e);
+  color: #e53e3e;
   margin: 0;
 }
 
@@ -2391,6 +2394,7 @@ textarea {
   gap: 16px;
   padding: 16px 0;
   text-align: center;
+  color: #111111;
 }
 
 .modal-box__actions {
@@ -2402,23 +2406,23 @@ textarea {
 .modal-box__cancel-btn {
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
   cursor: pointer;
   font-size: 13px;
-  color: var(--text-primary);
+  color: #333333;
 }
 
 .modal-box__cancel-btn:hover {
-  background: var(--surface-hover);
+  background: #f3f4f6;
 }
 
 .modal-box__confirm-btn {
   padding: 8px 16px;
   border-radius: 8px;
   border: none;
-  background: var(--text-primary);
-  color: var(--surface);
+  background: #111111;
+  color: #ffffff;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
@@ -2432,10 +2436,11 @@ textarea {
 .modal-box__close-btn {
   padding: 8px 20px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
   cursor: pointer;
   font-size: 13px;
+  color: #333333;
 }
 
 /* ── Recharge options grid ── */
@@ -2452,8 +2457,8 @@ textarea {
   gap: 4px;
   padding: 14px 12px;
   border-radius: 12px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
+  border: 1.5px solid #e5e7eb;
+  background: #ffffff;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
@@ -2465,16 +2470,16 @@ textarea {
 
 .recharge-option span {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: #888888;
 }
 
 .recharge-option:hover {
-  border-color: var(--text-primary);
+  border-color: #111111;
 }
 
 .recharge-option.is-selected {
-  border-color: var(--text-primary);
-  background: var(--surface-hover);
+  border-color: #111111;
+  background: #f3f4f6;
 }
 
 /* ── Billing table actions ── */
