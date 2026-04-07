@@ -142,7 +142,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     : (selectedOption?.amountUsd ?? 0)
 
   const handleRecharge = async () => {
+    console.log('[recharge] called', { identityToken: !!identityToken, activeWallet: activeWallet?.address, effectiveAmountUsd })
     if (!identityToken || !activeWallet || effectiveAmountUsd <= 0) {
+      console.log('[recharge] early return', { identityToken: !!identityToken, activeWallet: !!activeWallet, effectiveAmountUsd })
       if (!activeWallet) setRechargeError('请先连接钱包')
       return
     }
@@ -169,6 +171,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       setRechargeStatus('success')
       void refreshSession()
     } catch (err) {
+      console.error('[recharge error]', err)
       setRechargeStatus('error')
       setRechargeError(err instanceof Error ? err.message : '支付失败，请重试')
     }
