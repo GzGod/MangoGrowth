@@ -1,6 +1,6 @@
 'use client'
 
-import { CircleDollarSign, Copy, CreditCard, UserRound, WalletCards, X } from 'lucide-react'
+import { CircleDollarSign, Copy, CreditCard, UserRound, Wallet, WalletCards, X } from 'lucide-react'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { useConnectWallet, useWallets, useX402Fetch } from '@privy-io/react-auth'
@@ -164,21 +164,37 @@ export default function BillingPage() {
                   ))}
                 </div>
                 {rechargeError && <p className="modal-box__error">{rechargeError}</p>}
-                {!activeWallet && (
-                  <div className="modal-box__connect">
-                    <p className="modal-box__error">请先连接钱包才能支付</p>
-                    <SecondaryButton onClick={() => connectWallet()}>连接钱包</SecondaryButton>
+
+                {!activeWallet ? (
+                  <div className="recharge-wallet-empty">
+                    <div className="recharge-wallet-empty__icon">
+                      <Wallet size={28} />
+                    </div>
+                    <strong>钱包未连接</strong>
+                    <span>加密货币支付需要连接钱包</span>
+                    <PrimaryButton onClick={() => connectWallet()}>
+                      <Wallet size={14} />
+                      连接钱包
+                    </PrimaryButton>
                   </div>
+                ) : (
+                  <>
+                    <div className="recharge-wallet-info">
+                      <Wallet size={14} />
+                      <span>{activeWallet.address.slice(0, 6)}...{activeWallet.address.slice(-4)}</span>
+                      <button type="button" className="recharge-wallet-info__disconnect" onClick={() => connectWallet()}>切换钱包</button>
+                    </div>
+                    <div className="modal-box__actions">
+                      <SecondaryButton onClick={closeModal}>取消</SecondaryButton>
+                      <PrimaryButton
+                        onClick={() => void handleRecharge()}
+                        disabled={!selectedOption || rechargeStatus === 'loading'}
+                      >
+                        {rechargeStatus === 'loading' ? '支付中...' : '确认支付'}
+                      </PrimaryButton>
+                    </div>
+                  </>
                 )}
-                <div className="modal-box__actions">
-                  <SecondaryButton onClick={closeModal}>取消</SecondaryButton>
-                  <PrimaryButton
-                    onClick={() => void handleRecharge()}
-                    disabled={!selectedOption || !activeWallet || rechargeStatus === 'loading'}
-                  >
-                    {rechargeStatus === 'loading' ? '支付中...' : '确认支付'}
-                  </PrimaryButton>
-                </div>
               </>
             )}
           </div>
