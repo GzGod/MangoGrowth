@@ -26,7 +26,7 @@ import {
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useWallets, useX402Fetch } from '@privy-io/react-auth'
+import { useWallets, useX402Fetch, useConnectWallet } from '@privy-io/react-auth'
 
 import { useSession } from '@/components/providers/session-provider'
 import { resolveDisplayIdentity } from '@/lib/auth/identity'
@@ -98,6 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { logout, user, authIdentity, isAuthenticated, identityToken, refreshSession } = useSession()
   const { wallets } = useWallets()
   const { wrapFetchWithPayment } = useX402Fetch()
+  const { connectWallet } = useConnectWallet()
   const isAdminPage = pathname.startsWith('/admin')
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [showRechargeModal, setShowRechargeModal] = useState(false)
@@ -105,10 +106,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [rechargeStatus, setRechargeStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [rechargeError, setRechargeError] = useState<string | null>(null)
 
-  const embeddedWallet = wallets.find((w) => w.walletClientType === 'privy')
+  const activeWallet = wallets.find((w) => w.walletClientType !== 'privy') ?? wallets.find((w) => w.walletClientType === 'privy')
 
   const handleRecharge = async () => {
-    if (!selectedOption || !identityToken || !embeddedWallet) return
+    if (!selectedOption || !identityToken || !activeWallet) return
     setRechargeStatus('loading')
     setRechargeError(null)
     try {
@@ -120,7 +121,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       if (!createRes.ok) throw new Error('创建充值订单失败')
       const { rechargeOrder } = (await createRes.json()) as { rechargeOrder: { id: string } }
 
-      const payFetch = wrapFetchWithPayment({ walletAddress: embeddedWallet.address, fetch })
+      const payFetch = wrapFetchWithPayment({ walletAddress: activeWallet.address, fetch })
       const payRes = await payFetch(`/api/recharge-orders/${rechargeOrder.id}/pay`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${identityToken}` },
@@ -441,8 +442,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   ))}
                 </div>
                 {rechargeError && <p className="modal-box__error">{rechargeError}</p>}
-                {!embeddedWallet && (
-                  <p className="modal-box__error">未检测到 Privy 内嵌钱包，请先在账户中创建钱包。</p>
+                {!activeWallet && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <p className="modal-box__error">请先连接钱包才能支付</p>
+                    <button type="button" className="modal-box__cancel-btn" onClick={() => connectWallet()}>连接钱包</button>
+                  </div>
                 )}
                 <div className="modal-box__actions">
                   <button type="button" className="modal-box__cancel-btn" onClick={closeRechargeModal}>取消</button>
@@ -450,7 +454,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     type="button"
                     className="modal-box__confirm-btn"
                     onClick={() => void handleRecharge()}
-                    disabled={!selectedOption || !embeddedWallet || rechargeStatus === 'loading'}
+                    disabled={!selectedOption || !activeWallet || rechargeStatus === 'loading'}
                   >
                     {rechargeStatus === 'loading' ? '支付中...' : '确认支付'}
                   </button>
