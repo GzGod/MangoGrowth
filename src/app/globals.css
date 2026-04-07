@@ -2502,10 +2502,57 @@ textarea {
   font-size: 12px;
   color: #3478f6;
   padding: 0;
+  margin-left: auto;
 }
 
 .recharge-wallet-info__disconnect:hover {
   text-decoration: underline;
+}
+
+.recharge-wallet-info__balance {
+  font-size: 12px;
+  color: #555;
+  font-family: monospace;
+}
+
+.recharge-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recharge-custom__label {
+  font-size: 12px;
+  color: #666;
+}
+
+.recharge-custom__input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  font-size: 14px;
+  color: #333;
+}
+
+.recharge-custom__input-wrap:focus-within {
+  border-color: #111;
+}
+
+.recharge-custom__input {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 14px;
+  background: transparent;
+  color: #111;
+}
+
+.recharge-custom__input::placeholder {
+  color: #aaa;
 }
 
 /* ── Recharge options grid ── */

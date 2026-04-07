@@ -2,7 +2,7 @@
 
 import { CircleDollarSign, Copy, CreditCard, UserRound, Wallet, WalletCards, X } from 'lucide-react'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useConnectWallet, useWallets, useX402Fetch } from '@privy-io/react-auth'
 
 import { UsageChart } from '@/components/charts/usage-chart'
@@ -39,11 +39,15 @@ type DashboardResponse = {
 }
 
 const RECHARGE_OPTIONS = [
-  { label: '$10', amountUsd: 1000 },
-  { label: '$45', amountUsd: 4500 },
-  { label: '$80', amountUsd: 8000 },
-  { label: '$350', amountUsd: 35000 },
+  { label: '$100', amountUsd: 10000 },
+  { label: '$500', amountUsd: 50000 },
+  { label: '$1000', amountUsd: 100000 },
 ]
+
+// USDC 合约地址（base-sepolia 测试网）
+const USDC_ADDRESS_BASE_SEPOLIA = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+const USDC_ADDRESS_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+const USDC_ABI = [{ inputs: [{ name: 'account', type: 'address' }], name: 'balanceOf', outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view', type: 'function' }] as const
 
 const paymentTabs: Array<{ key: PaymentTab; label: string }> = [
   { key: 'recharge', label: '充值' },
@@ -63,13 +67,49 @@ export default function BillingPage() {
   const [selectedOption, setSelectedOption] = useState<(typeof RECHARGE_OPTIONS)[number] | null>(null)
   const [rechargeStatus, setRechargeStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [rechargeError, setRechargeError] = useState<string | null>(null)
+  const [customAmount, setCustomAmount] = useState('')
+  const [usdcBalance, setUsdcBalance] = useState<string | null>(null)
 
   // 优先用外部钱包（MetaMask 等），没有再用 Privy 内嵌钱包
   const activeWallet = wallets.find((w) => w.walletClientType !== 'privy') ?? wallets.find((w) => w.walletClientType === 'privy')
 
+  // 读取 USDC 余额
+  useEffect(() => {
+    if (!activeWallet) { setUsdcBalance(null); return }
+    const network = process.env.NEXT_PUBLIC_X402_NETWORK ?? 'base-sepolia'
+    const usdcAddress = network === 'base' ? USDC_ADDRESS_BASE : USDC_ADDRESS_BASE_SEPOLIA
+    const rpcUrl = network === 'base' ? 'https://mainnet.base.org' : 'https://sepolia.base.org'
+
+    void (async () => {
+      try {
+        const res = await fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 1, method: 'eth_call',
+            params: [{ to: usdcAddress, data: `0x70a08231000000000000000000000000${activeWallet.address.slice(2)}` }, 'latest'],
+          }),
+        })
+        const json = await res.json() as { result?: string }
+        if (json.result && json.result !== '0x') {
+          const raw = BigInt(json.result)
+          setUsdcBalance((Number(raw) / 1e6).toFixed(2))
+        } else {
+          setUsdcBalance('0.00')
+        }
+      } catch {
+        setUsdcBalance(null)
+      }
+    })()
+  }, [activeWallet])
+
+  // 实际充值金额：选中预设 or 自定义
+  const effectiveAmountUsd = customAmount
+    ? Math.round(parseFloat(customAmount) * 100)
+    : (selectedOption?.amountUsd ?? 0)
+
   const handleRecharge = async () => {
-    console.log('[recharge] selectedOption:', selectedOption, 'identityToken:', !!identityToken, 'activeWallet:', activeWallet?.address)
-    if (!selectedOption || !identityToken || !activeWallet) {
+    if (!identityToken || !activeWallet || effectiveAmountUsd <= 0) {
       if (!activeWallet) setRechargeError('请先连接钱包')
       return
     }
@@ -79,7 +119,7 @@ export default function BillingPage() {
       const createRes = await fetch('/api/recharge-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${identityToken}` },
-        body: JSON.stringify({ amountUsd: selectedOption.amountUsd }),
+        body: JSON.stringify({ amountUsd: effectiveAmountUsd }),
       })
       if (!createRes.ok) throw new Error('创建充值订单失败')
       const { rechargeOrder } = (await createRes.json()) as { rechargeOrder: { id: string } }
@@ -106,6 +146,7 @@ export default function BillingPage() {
   const closeModal = () => {
     setShowRechargeModal(false)
     setSelectedOption(null)
+    setCustomAmount('')
     setRechargeStatus('idle')
     setRechargeError(null)
   }
@@ -155,13 +196,27 @@ export default function BillingPage() {
                     <button
                       key={opt.amountUsd}
                       type="button"
-                      className={`recharge-option${selectedOption?.amountUsd === opt.amountUsd ? ' is-selected' : ''}`}
-                      onClick={() => setSelectedOption(opt)}
+                      className={`recharge-option${selectedOption?.amountUsd === opt.amountUsd && !customAmount ? ' is-selected' : ''}`}
+                      onClick={() => { setSelectedOption(opt); setCustomAmount('') }}
                     >
                       <strong>{opt.label}</strong>
                       <span>USDC</span>
                     </button>
                   ))}
+                </div>
+                <div className="recharge-custom">
+                  <label className="recharge-custom__label">自定义金额 (USD)</label>
+                  <div className="recharge-custom__input-wrap">
+                    <span>$</span>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="输入金额"
+                      value={customAmount}
+                      onChange={(e) => { setCustomAmount(e.target.value); setSelectedOption(null) }}
+                      className="recharge-custom__input"
+                    />
+                  </div>
                 </div>
                 {rechargeError && <p className="modal-box__error">{rechargeError}</p>}
 
@@ -182,15 +237,16 @@ export default function BillingPage() {
                     <div className="recharge-wallet-info">
                       <Wallet size={14} />
                       <span>{activeWallet.address.slice(0, 6)}...{activeWallet.address.slice(-4)}</span>
+                      {usdcBalance !== null && <span className="recharge-wallet-info__balance">{usdcBalance} USDC</span>}
                       <button type="button" className="recharge-wallet-info__disconnect" onClick={() => connectWallet()}>切换钱包</button>
                     </div>
                     <div className="modal-box__actions">
                       <SecondaryButton onClick={closeModal}>取消</SecondaryButton>
                       <PrimaryButton
                         onClick={() => void handleRecharge()}
-                        disabled={!selectedOption || rechargeStatus === 'loading'}
+                        disabled={effectiveAmountUsd <= 0 || rechargeStatus === 'loading'}
                       >
-                        {rechargeStatus === 'loading' ? '支付中...' : '确认支付'}
+                        {rechargeStatus === 'loading' ? '支付中...' : `确认支付 $${(effectiveAmountUsd / 100).toFixed(2)}`}
                       </PrimaryButton>
                     </div>
                   </>
