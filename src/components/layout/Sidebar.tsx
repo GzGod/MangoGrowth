@@ -109,7 +109,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const activeWallet = wallets.find((w) => w.walletClientType !== 'privy') ?? wallets.find((w) => w.walletClientType === 'privy')
 
   const handleRecharge = async () => {
-    if (!selectedOption || !identityToken || !activeWallet) return
+    console.log('[recharge] selectedOption:', selectedOption, 'identityToken:', !!identityToken, 'activeWallet:', activeWallet?.address)
+    if (!selectedOption || !identityToken || !activeWallet) {
+      if (!activeWallet) setRechargeError('请先连接钱包')
+      return
+    }
     setRechargeStatus('loading')
     setRechargeError(null)
     try {
