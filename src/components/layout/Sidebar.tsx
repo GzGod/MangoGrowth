@@ -26,7 +26,10 @@ import {
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useWallets, useX402Fetch, useConnectWallet } from '@privy-io/react-auth'
+import { useWallets, useConnectWallet } from '@privy-io/react-auth'
+import { createWalletClient, custom, publicActions } from 'viem'
+import { base, baseSepolia } from 'viem/chains'
+import { preparePaymentHeader, signPaymentHeader } from 'x402/client'
 
 import { useSession } from '@/components/providers/session-provider'
 import { resolveDisplayIdentity } from '@/lib/auth/identity'
@@ -96,7 +99,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { logout, user, authIdentity, isAuthenticated, identityToken, refreshSession } = useSession()
   const { wallets } = useWallets()
-  const { wrapFetchWithPayment } = useX402Fetch()
   const { connectWallet } = useConnectWallet()
   const isAdminPage = pathname.startsWith('/admin')
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -151,6 +153,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setRechargeStatus('loading')
     setRechargeError(null)
     try {
+      // 1. Create recharge order
       const createRes = await fetch('/api/recharge-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${identityToken}` },
@@ -159,10 +162,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       if (!createRes.ok) throw new Error('创建充值订单失败')
       const { rechargeOrder } = (await createRes.json()) as { rechargeOrder: { id: string } }
 
-      const payFetch = wrapFetchWithPayment({ walletAddress: activeWallet.address, fetch, maxValue: BigInt(effectiveAmountUsd) * BigInt(1e4) })
-      const payRes = await payFetch(`/api/recharge-orders/${rechargeOrder.id}/pay`, {
+      // 2. Hit pay endpoint to get 402 + payment requirements
+      const probeRes = await fetch(`/api/recharge-orders/${rechargeOrder.id}/pay`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${identityToken}` },
+      })
+      if (probeRes.status !== 402) {
+        if (probeRes.ok) { setRechargeStatus('success'); void refreshSession(); return }
+        throw new Error('支付端点异常')
+      }
+      const { x402Version, accepts } = (await probeRes.json()) as { x402Version: number; accepts: unknown[] }
+
+      // 3. Select payment requirements (prefer USDC)
+      const { selectPaymentRequirements } = await import('x402/client')
+      const paymentReq = selectPaymentRequirements(accepts as Parameters<typeof selectPaymentRequirements>[0])
+
+      // 4. Build viem wallet client from EIP-1193 provider
+      const network = process.env.NEXT_PUBLIC_X402_NETWORK ?? 'base-sepolia'
+      const chain = network === 'base' ? base : baseSepolia
+      const provider = await activeWallet.getEthereumProvider()
+      const walletClient = createWalletClient({ account: activeWallet.address as `0x${string}`, chain, transport: custom(provider) }).extend(publicActions)
+
+      // 5. Build and sign payment header (encodes to base64 internally)
+      const { createPaymentHeader } = await import('x402/client')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const paymentHeader = await createPaymentHeader(walletClient as any, x402Version, paymentReq)
+
+      // 6. Retry with X-PAYMENT header
+      const payRes = await fetch(`/api/recharge-orders/${rechargeOrder.id}/pay`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${identityToken}`, 'X-PAYMENT': paymentHeader, 'Access-Control-Expose-Headers': 'X-PAYMENT-RESPONSE' },
       })
       if (!payRes.ok) {
         const body = (await payRes.json()) as { error?: string }
