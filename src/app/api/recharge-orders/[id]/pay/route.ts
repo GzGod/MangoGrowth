@@ -77,7 +77,7 @@ export const POST = withX402(
     const order = await db.rechargeOrder.findFirst({ where: { id } })
     const priceUsd = order?.amountUsd ?? 1
     return {
-      price: `$${priceUsd}` as `$${number}`,
+      price: `$${(priceUsd / 100).toFixed(2)}` as `$${number}`,
       network: NETWORK,
       config: { description: `MangoGrowth 充值 $${(priceUsd / 100).toFixed(2)}` },
     }
