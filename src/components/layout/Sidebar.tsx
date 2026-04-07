@@ -32,10 +32,10 @@ import { useSession } from '@/components/providers/session-provider'
 import { resolveDisplayIdentity } from '@/lib/auth/identity'
 
 const RECHARGE_OPTIONS = [
-  { label: '$10', amountUsd: 10 },
-  { label: '$45', amountUsd: 45 },
-  { label: '$80', amountUsd: 80 },
-  { label: '$350', amountUsd: 350 },
+  { label: '$10', amountUsd: 1000 },
+  { label: '$45', amountUsd: 4500 },
+  { label: '$80', amountUsd: 8000 },
+  { label: '$350', amountUsd: 35000 },
 ]
 
 const navigation = [
