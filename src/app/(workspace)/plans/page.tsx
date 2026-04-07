@@ -3,13 +3,13 @@
 import {
   Bookmark,
   Heart,
-  Layers3,
   MessageCircle,
-  Quote,
   Repeat2,
-  Sparkles,
   UserPlus,
   Zap,
+  Sparkles,
+  Layers3,
+  BarChart3,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -34,14 +34,30 @@ type PlansResponse = {
   }>
 }
 
-const servicePlanVisuals = [
-  { icon: Layers3, badge: '标准' },
-  { icon: Sparkles, badge: '标准' },
-  { icon: Zap, badge: '加速' },
-  { icon: Zap, badge: '加速' },
-] as const
+const servicePackIcons = [Layers3, Sparkles, Zap, BarChart3] as const
 
-const subscriptionFeatureIcons = [Heart, MessageCircle, Repeat2, Bookmark] as const
+const featureLabels = ['关注', '点赞', '转发', '评论', '收藏'] as const
+const featureIcons = [UserPlus, Heart, Repeat2, MessageCircle, Bookmark] as const
+const subFeatureLabels = ['点赞', '评论', '转发', '收藏'] as const
+const subFeatureIcons = [Heart, MessageCircle, Repeat2, Bookmark] as const
+
+function parseFeatureValues(features: string[]): string[] {
+  return featureLabels.map((label) => {
+    const match = features.find((f) => f.includes(label))
+    if (!match) return '-'
+    const num = match.replace(label, '').trim()
+    return num || '-'
+  })
+}
+
+function parseSubFeatureValues(features: string[]): string[] {
+  return subFeatureLabels.map((label) => {
+    const match = features.find((f) => f.includes(label))
+    if (!match) return '-'
+    const num = match.replace(label, '').trim()
+    return num || '-'
+  })
+}
 
 export default function PlansPage() {
   const { identityToken } = useSession()
@@ -50,27 +66,14 @@ export default function PlansPage() {
   const [redeemCode, setRedeemCode] = useState('')
 
   const servicePlans = useMemo(
-    () => (plansData?.plans ?? []).filter((plan) => plan.category === 'CREDIT_PACK'),
+    () => (plansData?.plans ?? []).filter((p) => p.category === 'SERVICE_PLAN'),
     [plansData?.plans],
   )
 
   const subscriptionPlans = useMemo(
-    () => (plansData?.plans ?? []).filter((plan) => plan.category !== 'CREDIT_PACK'),
+    () => (plansData?.plans ?? []).filter((p) => p.category === 'SUBSCRIPTION_PLAN'),
     [plansData?.plans],
   )
-
-  const createRecharge = async (credits: number, amountUsd: number, slug: string) => {
-    if (!identityToken) return
-    setPendingSlug(slug)
-    try {
-      await apiFetch('/api/recharge-orders', identityToken, {
-        method: 'POST',
-        body: JSON.stringify({ credits, amountUsd }),
-      })
-    } finally {
-      setPendingSlug(null)
-    }
-  }
 
   const purchasePlan = async (planSlug: string) => {
     if (!identityToken) return
@@ -94,10 +97,10 @@ export default function PlansPage() {
 
       <div className="plan-grid plan-grid--services-refined">
         {servicePlans.map((plan, index) => {
-          const visual = servicePlanVisuals[index] ?? servicePlanVisuals[servicePlanVisuals.length - 1]
-          const Icon = visual.icon
-          const listValues = plan.features.filter((feature) => /\d/.test(feature)).slice(0, 5)
-          const listLabels = ['关注', '点赞', '转发', '评论', '收藏']
+          const Icon = servicePackIcons[index] ?? servicePackIcons[servicePackIcons.length - 1]
+          const values = parseFeatureValues(plan.features)
+          const originalPrice = Math.round(plan.priceUsd * 1.1)
+          const isAccelerated = plan.slug === 'momentum-pack' || plan.slug === 'scale-pack'
 
           return (
             <Panel key={plan.id} className={`plan-card plan-card--refined${plan.isFeatured ? ' is-featured' : ''}`}>
@@ -111,7 +114,7 @@ export default function PlansPage() {
 
               <div className="plan-card__price-row">
                 <strong>${plan.priceUsd}</strong>
-                <span className="plan-card__price-old">${Math.round(plan.priceUsd * 1.25)}</span>
+                <span className="plan-card__price-old">${originalPrice}</span>
               </div>
 
               <p className="plan-card__description">{plan.description}</p>
@@ -119,29 +122,35 @@ export default function PlansPage() {
               <div className="plan-card__meta-row">
                 <span>增长速度</span>
                 <div className="plan-card__meta-badges">
-                  <span className="plan-card__mini-badge">{visual.badge}</span>
-                  {plan.isFeatured ? <span className="plan-card__mini-badge plan-card__mini-badge--accent">加速</span> : null}
+                  <span className="plan-card__mini-badge">标准</span>
+                  {isAccelerated ? <span className="plan-card__mini-badge plan-card__mini-badge--accent">加速</span> : null}
                 </div>
               </div>
 
               <ul className="plan-card__feature-grid">
-                {listLabels.map((label, idx) => {
-                  const FeatureIcon = [UserPlus, Heart, Repeat2, MessageCircle, Bookmark][idx]
+                {featureLabels.map((label, idx) => {
+                  const FeatureIcon = featureIcons[idx]
                   return (
                     <li key={label}>
                       <span className="plan-card__feature-label">
                         <FeatureIcon size={14} />
                         {label}
                       </span>
-                      <strong>{listValues[idx] ?? '-'}</strong>
+                      <strong>{values[idx]}</strong>
                     </li>
                   )
                 })}
               </ul>
 
-              <PrimaryButton onClick={() => void createRecharge(plan.creditsGranted ?? 0, plan.priceUsd, plan.slug)} disabled={pendingSlug === plan.slug}>
-                {pendingSlug === plan.slug ? '创建中...' : '立即购买'}
-              </PrimaryButton>
+              {plan.isFeatured ? (
+                <PrimaryButton onClick={() => void purchasePlan(plan.slug)} disabled={pendingSlug === plan.slug}>
+                  {pendingSlug === plan.slug ? '创建中...' : '立即购买'}
+                </PrimaryButton>
+              ) : (
+                <SecondaryButton onClick={() => void purchasePlan(plan.slug)} disabled={pendingSlug === plan.slug}>
+                  {pendingSlug === plan.slug ? '创建中...' : '立即购买'}
+                </SecondaryButton>
+              )}
             </Panel>
           )
         })}
@@ -154,41 +163,36 @@ export default function PlansPage() {
 
       <div className="plan-grid plan-grid--subscriptions-refined">
         {subscriptionPlans.map((plan) => {
-          const numericFeatures = plan.features.filter((feature) => /\d/.test(feature)).slice(0, 4)
+          const isEnterprise = plan.slug === 'enterprise-sub'
+          const values = parseSubFeatureValues(plan.features)
 
           return (
             <Panel key={plan.id} className="plan-card plan-card--subscription-refined">
               <div className="plan-card__head">
                 <h3>{plan.name}</h3>
                 <div className="plan-card__price-row">
-                  <strong>{plan.slug.includes('enterprise') ? '自定义' : `$${plan.priceUsd}`}</strong>
-                  {plan.slug.includes('enterprise') ? null : <span>/月</span>}
+                  <strong>{isEnterprise ? '自定义' : `$${plan.priceUsd}`}</strong>
+                  {!isEnterprise ? <span>/月</span> : null}
                 </div>
                 <p>{plan.description}</p>
               </div>
 
               <ul className="plan-card__subscription-list">
-                {subscriptionFeatureIcons.map((FeatureIcon, index) => (
-                  <li key={index}>
-                    <span className="plan-card__feature-label">
-                      <FeatureIcon size={14} />
-                      {['点赞', '评论', '转发', '收藏'][index]}
-                    </span>
-                    <strong>{numericFeatures[index] ?? '-'}</strong>
-                  </li>
-                ))}
-                {plan.slug.includes('enterprise') ? (
-                  <li>
-                    <span className="plan-card__feature-label">
-                      <Quote size={14} />
-                      支持
-                    </span>
-                    <strong>定制</strong>
-                  </li>
-                ) : null}
+                {isEnterprise ? null : subFeatureLabels.map((label, idx) => {
+                  const FeatureIcon = subFeatureIcons[idx]
+                  return (
+                    <li key={label}>
+                      <span className="plan-card__feature-label">
+                        <FeatureIcon size={14} />
+                        {label}
+                      </span>
+                      <strong>{values[idx]}</strong>
+                    </li>
+                  )
+                })}
               </ul>
 
-              {plan.slug.includes('enterprise') ? (
+              {isEnterprise ? (
                 <PrimaryButton onClick={() => void purchasePlan(plan.slug)} disabled={pendingSlug === plan.slug}>
                   联系我们
                 </PrimaryButton>
@@ -206,7 +210,7 @@ export default function PlansPage() {
         <h3>兑换订阅码</h3>
         <p>输入您的兑换码以激活订阅计划</p>
         <div className="redeem-card__row">
-          <input placeholder="请输入兑换码" value={redeemCode} onChange={(event) => setRedeemCode(event.target.value)} />
+          <input placeholder="请输入兑换码" value={redeemCode} onChange={(e) => setRedeemCode(e.target.value)} />
           <SecondaryButton disabled>兑换</SecondaryButton>
         </div>
       </Panel>

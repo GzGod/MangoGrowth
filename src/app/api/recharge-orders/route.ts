@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 
 import { requireSessionUser, routeErrorResponse } from '@/lib/auth/request'
 import { db } from '@/lib/db'
 import { serializeRechargeOrder } from '@/lib/server/serializers'
+
+const rechargeSchema = z.object({
+  credits: z.number().int().positive().max(10_000_000),
+  amountUsd: z.number().int().positive().max(100_000),
+})
 
 export async function GET(request: Request) {
   try {
@@ -24,19 +30,19 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await requireSessionUser(request)
-    const body = (await request.json()) as { credits?: number; amountUsd?: number }
-
-    if (!body.credits || !body.amountUsd) {
-      return NextResponse.json({ error: 'Missing recharge amount' }, { status: 400 })
+    const parsed = rechargeSchema.safeParse(await request.json())
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
     }
+    const { credits, amountUsd } = parsed.data
 
     const order = await db.rechargeOrder.create({
       data: {
         userId: user.id,
-        credits: body.credits,
-        amountUsd: body.amountUsd,
+        credits,
+        amountUsd,
         status: 'PENDING',
-        provider: 'placeholder',
+        provider: 'x402',
       },
     })
 

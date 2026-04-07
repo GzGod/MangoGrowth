@@ -1,8 +1,17 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 
 import { requireSessionUser, routeErrorResponse } from '@/lib/auth/request'
 import { db } from '@/lib/db'
 import { serializeTask } from '@/lib/server/serializers'
+
+const taskSchema = z.object({
+  type: z.enum(['FOLLOW', 'LIKE', 'REPOST', 'COMMENT', 'BOOKMARK', 'QUOTE']),
+  targetAccount: z.string().min(1).max(100),
+  targetPostUrl: z.string().url().max(500).optional(),
+  orderId: z.string().optional(),
+  note: z.string().max(500).optional(),
+})
 
 export async function GET(request: Request) {
   try {
@@ -21,27 +30,21 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await requireSessionUser(request)
-    const body = (await request.json()) as {
-      type?: 'FOLLOW' | 'LIKE' | 'REPOST' | 'COMMENT' | 'BOOKMARK' | 'QUOTE'
-      orderId?: string
-      targetAccount?: string
-      targetPostUrl?: string
-      note?: string
+    const parsed = taskSchema.safeParse(await request.json())
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
     }
-
-    if (!body.type || !body.targetAccount) {
-      return NextResponse.json({ error: 'Task type and target account are required' }, { status: 400 })
-    }
+    const { type, targetAccount, targetPostUrl, orderId, note } = parsed.data
 
     const task = await db.serviceTask.create({
       data: {
         userId: user.id,
-        orderId: body.orderId,
-        type: body.type,
+        orderId,
+        type,
         status: 'QUEUED',
-        targetAccount: body.targetAccount,
-        targetPostUrl: body.targetPostUrl,
-        note: body.note,
+        targetAccount,
+        targetPostUrl,
+        note,
       },
     })
 

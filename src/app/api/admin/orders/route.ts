@@ -12,13 +12,25 @@ export async function GET(request: Request) {
       include: {
         plan: true,
         user: true,
+        tasks: true,
       },
       orderBy: { createdAt: 'desc' },
     })
-    type AdminOrderRecord = (typeof orders)[number]
 
     return NextResponse.json({
-      orders: orders.map((order: AdminOrderRecord) => serializeOrder(order)),
+      orders: orders.map((order) => ({
+        ...serializeOrder(order),
+        type: order.type,
+        tasks: order.tasks.map((task) => ({
+          id: task.id,
+          type: task.type,
+          status: task.status,
+          targetAccount: task.targetAccount,
+          targetPostUrl: task.targetPostUrl,
+          note: task.note,
+          createdAt: task.createdAt.toISOString(),
+        })),
+      })),
     })
   } catch (error) {
     return routeErrorResponse(error)

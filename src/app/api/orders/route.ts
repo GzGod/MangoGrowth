@@ -1,11 +1,16 @@
 import type { Prisma } from '@/generated/prisma/client'
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 
 import { createSubscriptionPurchase } from '@/lib/billing/accounting'
 import { requireSessionUser, routeErrorResponse } from '@/lib/auth/request'
 import { db } from '@/lib/db'
 import { ensurePlanCatalog } from '@/lib/server/plans'
 import { serializeOrder } from '@/lib/server/serializers'
+
+const orderSchema = z.object({
+  planSlug: z.string().min(1).max(100),
+})
 
 export async function GET(request: Request) {
   try {
@@ -29,14 +34,14 @@ export async function POST(request: Request) {
   try {
     await ensurePlanCatalog()
     const user = await requireSessionUser(request)
-    const body = (await request.json()) as { planSlug?: string }
-
-    if (!body.planSlug) {
-      return NextResponse.json({ error: 'Plan slug is required' }, { status: 400 })
+    const parsed = orderSchema.safeParse(await request.json())
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
     }
+    const { planSlug } = parsed.data
 
     const plan = await db.plan.findUnique({
-      where: { slug: body.planSlug },
+      where: { slug: planSlug },
     })
 
     if (!plan || !plan.creditsCost) {

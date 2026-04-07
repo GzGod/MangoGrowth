@@ -1,6 +1,6 @@
 'use client'
 
-import { ShieldCheck, ShieldPlus, Users } from 'lucide-react'
+import { ChevronDown, ChevronUp, ShieldCheck, ShieldPlus, Users } from 'lucide-react'
 import { useState } from 'react'
 
 import { useAdminApiQuery } from '@/hooks/use-admin-api-query'
@@ -16,16 +16,32 @@ type AdminUsersResponse = {
   }>
 }
 
+type AdminTask = {
+  id: string
+  type: string
+  status: string
+  targetAccount: string
+  targetPostUrl: string | null
+  note: string | null
+  createdAt: string
+}
+
+type AdminOrder = {
+  id: string
+  type: string
+  status: string
+  amountUsd: number
+  creditsCost: number
+  progress: number
+  createdAt: string
+  completedAt: string | null
+  plan: { id: string; name: string; category: string }
+  user: { id: string; email: string | null; name: string | null; role: string } | null
+  tasks: AdminTask[]
+}
+
 type AdminOrdersResponse = {
-  orders: Array<{
-    id: string
-    status: string
-    amountUsd: number
-    creditsCost: number
-    createdAt: string
-    plan: { name: string }
-    user: { email: string | null } | null
-  }>
+  orders: AdminOrder[]
 }
 
 type AdminRechargeOrdersResponse = {
@@ -77,6 +93,125 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+const ORDER_STATUSES = ['PENDING', 'PAID', 'ACTIVE', 'COMPLETED', 'CANCELED'] as const
+
+function OrderDetailRow({
+  order,
+  colSpan,
+  onUpdated,
+}: {
+  order: AdminOrder
+  colSpan: number
+  onUpdated: () => Promise<void>
+}) {
+  const [status, setStatus] = useState(order.status)
+  const [progress, setProgress] = useState(String(order.progress))
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await adminFetch(`/api/admin/orders/${order.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, progress: Number(progress) }),
+      })
+      await onUpdated()
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : '保存失败')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <tr className="order-detail-row">
+      <td colSpan={colSpan} className="order-detail-cell">
+        <div className="order-detail-content">
+          <div className="order-detail-grid">
+            <div className="order-detail-section">
+              <h5>用户信息</h5>
+              <p><span>邮箱</span><strong>{order.user?.email ?? '未知'}</strong></p>
+              <p><span>用户 ID</span><strong className="order-detail-id">{order.user?.id ?? '-'}</strong></p>
+            </div>
+            <div className="order-detail-section">
+              <h5>套餐信息</h5>
+              <p><span>套餐名</span><strong>{order.plan.name}</strong></p>
+              <p><span>类型</span><strong>{order.type}</strong></p>
+              <p><span>金额</span><strong>${order.amountUsd}</strong></p>
+              <p><span>积分消耗</span><strong>{order.creditsCost.toLocaleString()}</strong></p>
+            </div>
+            <div className="order-detail-section">
+              <h5>更新状态</h5>
+              <label className="field">
+                <span>状态</span>
+                <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                  {ORDER_STATUSES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>进度 (0-100)</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={progress}
+                  onChange={(e) => setProgress(e.target.value)}
+                />
+              </label>
+              {saveError ? <p className="field-error">{saveError}</p> : null}
+              <PrimaryButton onClick={() => void handleSave()} disabled={saving}>
+                {saving ? '保存中...' : '保存'}
+              </PrimaryButton>
+            </div>
+          </div>
+
+          {order.tasks.length > 0 ? (
+            <div className="order-detail-tasks">
+              <h5>关联任务 ({order.tasks.length})</h5>
+              <table className="data-table data-table--compact">
+                <thead>
+                  <tr>
+                    <th>类型</th>
+                    <th>状态</th>
+                    <th>目标账号</th>
+                    <th>目标链接</th>
+                    <th>备注</th>
+                    <th>创建时间</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {order.tasks.map((task) => (
+                    <tr key={task.id}>
+                      <td>{task.type}</td>
+                      <td><StatusPill>{task.status}</StatusPill></td>
+                      <td>{task.targetAccount}</td>
+                      <td>
+                        {task.targetPostUrl ? (
+                          <a href={task.targetPostUrl} target="_blank" rel="noopener noreferrer" className="order-detail-link">
+                            查看
+                          </a>
+                        ) : '-'}
+                      </td>
+                      <td>{task.note ?? '-'}</td>
+                      <td>{new Date(task.createdAt).toLocaleString('zh-CN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="order-detail-empty">暂无关联任务</p>
+          )}
+        </div>
+      </td>
+    </tr>
+  )
+}
+
 export function AdminScreen({
   admin,
 }: {
@@ -87,7 +222,7 @@ export function AdminScreen({
   }
 }) {
   const { data: usersData } = useAdminApiQuery<AdminUsersResponse>('/api/admin/users', true)
-  const { data: ordersData } = useAdminApiQuery<AdminOrdersResponse>('/api/admin/orders', true)
+  const { data: ordersData, refetch: refetchOrders } = useAdminApiQuery<AdminOrdersResponse>('/api/admin/orders', true)
   const { data: rechargeData } = useAdminApiQuery<AdminRechargeOrdersResponse>('/api/admin/recharge-orders', true)
   const { data: tasksData } = useAdminApiQuery<AdminTasksResponse>('/api/admin/tasks', true)
   const { data: adminAccountsData, refetch: refetchAdminAccounts } = useAdminApiQuery<AdminAccountsResponse>('/api/admin/admin-users', true)
@@ -97,21 +232,16 @@ export function AdminScreen({
   const [displayName, setDisplayName] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
 
   const handleCreateAdmin = async () => {
     setIsSubmitting(true)
     setFormError(null)
-
     try {
       await adminFetch('/api/admin/admin-users', {
         method: 'POST',
-        body: JSON.stringify({
-          username,
-          password,
-          displayName,
-        }),
+        body: JSON.stringify({ username, password, displayName }),
       })
-
       setUsername('')
       setPassword('')
       setDisplayName('')
@@ -134,6 +264,8 @@ export function AdminScreen({
   const rechargeOrders = rechargeData?.rechargeOrders ?? []
   const tasks = tasksData?.tasks ?? []
 
+  const ORDER_COLUMNS = ['订单 ID', '下单用户', '订单名称', '状态', '积分消耗', '金额', '创建时间', '']
+
   return (
     <div className="page-stack page-stack--admin">
       <Panel className="notice-bar admin-notice-bar">
@@ -155,27 +287,21 @@ export function AdminScreen({
 
         <div className="admin-hero-grid">
           <div className="admin-highlight-card">
-            <span className="admin-highlight-card__icon">
-              <ShieldCheck size={18} />
-            </span>
+            <span className="admin-highlight-card__icon"><ShieldCheck size={18} /></span>
             <div>
               <strong>当前身份</strong>
               <p>{admin.displayName ?? admin.username}</p>
             </div>
           </div>
           <div className="admin-highlight-card">
-            <span className="admin-highlight-card__icon">
-              <ShieldPlus size={18} />
-            </span>
+            <span className="admin-highlight-card__icon"><ShieldPlus size={18} /></span>
             <div>
               <strong>管理员数量</strong>
               <p>{adminAccounts.length.toLocaleString()} 个账号</p>
             </div>
           </div>
           <div className="admin-highlight-card">
-            <span className="admin-highlight-card__icon">
-              <Users size={18} />
-            </span>
+            <span className="admin-highlight-card__icon"><Users size={18} /></span>
             <div>
               <strong>平台用户</strong>
               <p>{users.length.toLocaleString()} 位注册用户</p>
@@ -190,29 +316,21 @@ export function AdminScreen({
               <p>创建新的独立后台账号，添加后可直接使用管理员登录页进入控制台。</p>
             </div>
           </div>
-
           <div className="admin-create-grid">
             <label className="field">
               <span>管理员账号</span>
-              <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="例如 admin-root" />
+              <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="例如 admin-root" />
             </label>
             <label className="field">
               <span>管理员密码</span>
-              <input
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                type="password"
-                placeholder="请输入新管理员密码"
-              />
+              <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="请输入新管理员密码" />
             </label>
             <label className="field">
               <span>显示名称</span>
-              <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="例如 运营主管" />
+              <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="例如 运营主管" />
             </label>
           </div>
-
           {formError ? <p className="field-error">{formError}</p> : null}
-
           <div className="panel-actions panel-actions--admin">
             <PrimaryButton onClick={() => void handleCreateAdmin()} disabled={isSubmitting}>
               {isSubmitting ? '创建中...' : '添加新管理员'}
@@ -227,7 +345,6 @@ export function AdminScreen({
               <p>查看当前后台管理员账号、显示名称和创建来源。</p>
             </div>
           </div>
-
           <TableShell
             columns={['管理员账号', '显示名称', '创建人', '创建时间']}
             rows={adminAccounts.map((account) => [
@@ -265,22 +382,54 @@ export function AdminScreen({
         <div className="panel-heading admin-panel__heading admin-panel__heading--table">
           <div>
             <h3>购买订单</h3>
-            <p>查看是谁下单、购买了什么、金额多少，以及当前状态。</p>
+            <p>查看是谁下单、购买了什么、金额多少，以及当前状态。点击行末按钮展开详情。</p>
           </div>
         </div>
-        <TableShell
-          columns={['订单 ID', '下单用户', '订单名称', '状态', '积分消耗', '金额', '创建时间']}
-          rows={orders.map((order) => [
-            order.id,
-            order.user?.email ?? '未知用户',
-            order.plan.name,
-            <StatusPill key={`${order.id}-status`}>{order.status}</StatusPill>,
-            order.creditsCost.toLocaleString(),
-            `$${order.amountUsd}`,
-            new Date(order.createdAt).toLocaleString('zh-CN'),
-          ])}
-          emptyText="暂时没有购买订单。"
-        />
+        <div className="table-shell">
+          <table className="data-table">
+            <thead>
+              <tr>
+                {ORDER_COLUMNS.map((col) => <th key={col}>{col}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {orders.length === 0 ? (
+                <tr>
+                  <td colSpan={ORDER_COLUMNS.length} className="table-empty">暂时没有购买订单。</td>
+                </tr>
+              ) : orders.map((order) => (
+                <>
+                  <tr key={order.id}>
+                    <td>{order.id}</td>
+                    <td>{order.user?.email ?? '未知用户'}</td>
+                    <td>{order.plan.name}</td>
+                    <td><StatusPill>{order.status}</StatusPill></td>
+                    <td>{order.creditsCost.toLocaleString()}</td>
+                    <td>${order.amountUsd}</td>
+                    <td>{new Date(order.createdAt).toLocaleString('zh-CN')}</td>
+                    <td>
+                      <button
+                        className="secondary-button secondary-button--icon"
+                        onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
+                        aria-label={expandedOrderId === order.id ? '收起' : '展开'}
+                      >
+                        {expandedOrderId === order.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                    </td>
+                  </tr>
+                  {expandedOrderId === order.id ? (
+                    <OrderDetailRow
+                      key={`${order.id}-detail`}
+                      order={order}
+                      colSpan={ORDER_COLUMNS.length}
+                      onUpdated={refetchOrders}
+                    />
+                  ) : null}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Panel>
 
       <Panel className="admin-panel admin-panel--table">
