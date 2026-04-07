@@ -446,23 +446,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   ))}
                 </div>
                 {rechargeError && <p className="modal-box__error">{rechargeError}</p>}
-                {!activeWallet && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <p className="modal-box__error">请先连接钱包才能支付</p>
-                    <button type="button" className="modal-box__cancel-btn" onClick={() => connectWallet()}>连接钱包</button>
+
+                {!activeWallet ? (
+                  <div className="recharge-wallet-empty">
+                    <div className="recharge-wallet-empty__icon">
+                      <Wallet size={28} />
+                    </div>
+                    <strong>钱包未连接</strong>
+                    <span>加密货币支付需要连接钱包</span>
+                    <button type="button" className="modal-box__confirm-btn" onClick={() => connectWallet()}>
+                      连接钱包
+                    </button>
                   </div>
+                ) : (
+                  <>
+                    <div className="recharge-wallet-info">
+                      <Wallet size={14} />
+                      <span>{activeWallet.address.slice(0, 6)}...{activeWallet.address.slice(-4)}</span>
+                      <button type="button" className="recharge-wallet-info__disconnect" onClick={() => connectWallet()}>切换钱包</button>
+                    </div>
+                    <div className="modal-box__actions">
+                      <button type="button" className="modal-box__cancel-btn" onClick={closeRechargeModal}>取消</button>
+                      <button
+                        type="button"
+                        className="modal-box__confirm-btn"
+                        onClick={() => void handleRecharge()}
+                        disabled={!selectedOption || rechargeStatus === 'loading'}
+                      >
+                        {rechargeStatus === 'loading' ? '支付中...' : '确认支付'}
+                      </button>
+                    </div>
+                  </>
                 )}
-                <div className="modal-box__actions">
-                  <button type="button" className="modal-box__cancel-btn" onClick={closeRechargeModal}>取消</button>
-                  <button
-                    type="button"
-                    className="modal-box__confirm-btn"
-                    onClick={() => void handleRecharge()}
-                    disabled={!selectedOption || !activeWallet || rechargeStatus === 'loading'}
-                  >
-                    {rechargeStatus === 'loading' ? '支付中...' : '确认支付'}
-                  </button>
-                </div>
               </>
             )}
           </div>
