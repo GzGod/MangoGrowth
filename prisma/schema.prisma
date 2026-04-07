@@ -85,6 +85,17 @@ model User {
   serviceTasks       ServiceTask[]
 }
 
+model AdminAccount {
+  id             String   @id @default(cuid())
+  username       String   @unique
+  passwordHash   String
+  displayName    String?
+  createdById    String?
+  createdByName  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 model Plan {
   id             String          @id @default(cuid())
   slug           String          @unique

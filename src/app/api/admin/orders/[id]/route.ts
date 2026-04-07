@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
-import { requireAdminSessionUser, routeErrorResponse } from '@/lib/auth/request'
+import { routeErrorResponse } from '@/lib/auth/request'
+import { requireAdminSession } from '@/lib/admin-auth/service'
 import { db } from '@/lib/db'
 import { serializeOrder } from '@/lib/server/serializers'
 
@@ -10,7 +11,7 @@ type Context = {
 
 export async function PATCH(request: Request, context: Context) {
   try {
-    await requireAdminSessionUser(request)
+    await requireAdminSession(request)
     const { id } = await context.params
     const body = (await request.json()) as { status?: 'PENDING' | 'PAID' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'; progress?: number }
 

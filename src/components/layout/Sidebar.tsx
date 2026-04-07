@@ -86,6 +86,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { logout, user, authIdentity, isAuthenticated } = useSession()
+  const isAdminPage = pathname.startsWith('/admin')
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -179,12 +180,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <nav className="sidebar__nav" aria-label="主导航">
           <NavItems />
-          {user?.role === 'ADMIN' ? (
+          {(user?.role === 'ADMIN' || isAdminPage) && (
             <Link href="/admin" className={`sidebar__link${pathname === '/admin' ? ' is-active' : ''}`}>
               <Shield size={16} />
               <span>管理后台</span>
             </Link>
-          ) : null}
+          )}
         </nav>
 
         <div className="sidebar__footer">
@@ -358,7 +359,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Brand />
             <nav className="mobile-drawer__nav" aria-label="移动导航">
               <NavItems onNavigate={() => setIsDrawerOpen(false)} />
-              {user?.role === 'ADMIN' ? (
+              {(user?.role === 'ADMIN' || isAdminPage) && (
                 <Link
                   href="/admin"
                   className={`sidebar__link${pathname === '/admin' ? ' is-active' : ''}`}
@@ -367,7 +368,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Shield size={16} />
                   <span>管理后台</span>
                 </Link>
-              ) : null}
+              )}
             </nav>
           </aside>
         </div>

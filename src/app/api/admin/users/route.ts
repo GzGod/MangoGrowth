@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 
-import { requireAdminSessionUser, routeErrorResponse } from '@/lib/auth/request'
+import { routeErrorResponse } from '@/lib/auth/request'
+import { requireAdminSession } from '@/lib/admin-auth/service'
 import { db } from '@/lib/db'
 
 export async function GET(request: Request) {
   try {
-    await requireAdminSessionUser(request)
+    await requireAdminSession(request)
     const users = await db.user.findMany({
       orderBy: { createdAt: 'desc' },
       select: {

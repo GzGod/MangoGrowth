@@ -40,3 +40,15 @@ export function getBootstrapAdminEmails() {
 export function getPublicAppUrl() {
   return requireUrlEnv('NEXT_PUBLIC_APP_URL', process.env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000')
 }
+
+export function getAdminUsername() {
+  return process.env.ADMIN_USERNAME?.trim() || process.env.BOOTSTRAP_ADMIN_USERNAME?.trim() || ''
+}
+
+export function getAdminPassword() {
+  return process.env.ADMIN_PASSWORD?.trim() || process.env.BOOTSTRAP_ADMIN_PASSWORD?.trim() || ''
+}
+
+export function getAdminSessionSecret() {
+  return process.env.ADMIN_SESSION_SECRET?.trim() || getPrivyAppSecret()
+}

@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 
-import { requireAdminSessionUser, routeErrorResponse } from '@/lib/auth/request'
+import { routeErrorResponse } from '@/lib/auth/request'
+import { requireAdminSession } from '@/lib/admin-auth/service'
 import { db } from '@/lib/db'
 
 export async function POST(request: Request) {
   try {
-    const admin = await requireAdminSessionUser(request)
+    const admin = await requireAdminSession(request)
     const body = (await request.json()) as {
       userId?: string
       amount?: number
@@ -33,7 +34,10 @@ export async function POST(request: Request) {
           amount,
           balanceAfter: nextBalance,
           description: body.reason ?? '管理员调整积分',
-          metadata: { actorUserId: admin.id },
+          metadata: {
+            actorAdminId: admin.id,
+            actorAdminUsername: admin.username,
+          },
         },
       }),
       db.user.update({
