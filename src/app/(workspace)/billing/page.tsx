@@ -1,12 +1,13 @@
 'use client'
 
-import { CircleDollarSign, Copy, CreditCard, UserRound, WalletCards } from 'lucide-react'
+import { CircleDollarSign, Copy, CreditCard, UserRound, WalletCards, X } from 'lucide-react'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { useWallets, useX402Fetch } from '@privy-io/react-auth'
 
 import { UsageChart } from '@/components/charts/usage-chart'
 import { useSession } from '@/components/providers/session-provider'
-import { EmptyState, Panel, PrimaryButton, StatCard, StatusPill, TableShell } from '@/components/ui/surface'
+import { EmptyState, Panel, PrimaryButton, SecondaryButton, StatCard, StatusPill, TableShell } from '@/components/ui/surface'
 import { useApiQuery } from '@/hooks/use-api-query'
 import { resolveDisplayIdentity } from '@/lib/auth/identity'
 import { usageRanges } from '@/lib/data/dashboard'
@@ -38,6 +39,13 @@ type DashboardResponse = {
   }>
 }
 
+const RECHARGE_OPTIONS = [
+  { credits: 100, amountUsd: 10 },
+  { credits: 500, amountUsd: 45 },
+  { credits: 1000, amountUsd: 80 },
+  { credits: 5000, amountUsd: 350 },
+]
+
 const paymentTabs: Array<{ key: PaymentTab; label: string }> = [
   { key: 'recharge', label: '充值' },
   { key: 'package', label: '套餐' },
@@ -45,14 +53,64 @@ const paymentTabs: Array<{ key: PaymentTab; label: string }> = [
 ]
 
 export default function BillingPage() {
-  const { user, authIdentity, isAuthenticated } = useSession()
-  const { data } = useApiQuery<DashboardResponse>('/api/dashboard')
+  const { user, authIdentity, isAuthenticated, identityToken, refreshSession } = useSession()
+  const { data, refetch } = useApiQuery<DashboardResponse>('/api/dashboard')
+  const { wallets } = useWallets()
+  const { wrapFetchWithPayment } = useX402Fetch()
   const [activeRange, setActiveRange] = useState<UsageRangeKey>('last7')
   const [activePaymentTab, setActivePaymentTab] = useState<PaymentTab>('recharge')
+  const [showRechargeModal, setShowRechargeModal] = useState(false)
+  const [selectedOption, setSelectedOption] = useState<(typeof RECHARGE_OPTIONS)[number] | null>(null)
+  const [rechargeStatus, setRechargeStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [rechargeError, setRechargeError] = useState<string | null>(null)
+
+  const embeddedWallet = wallets.find((w) => w.walletClientType === 'privy')
+
+  const handleRecharge = async () => {
+    if (!selectedOption || !identityToken || !embeddedWallet) return
+    setRechargeStatus('loading')
+    setRechargeError(null)
+    try {
+      // Step 1: create recharge order
+      const createRes = await fetch('/api/recharge-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${identityToken}` },
+        body: JSON.stringify({ credits: selectedOption.credits, amountUsd: selectedOption.amountUsd }),
+      })
+      if (!createRes.ok) throw new Error('创建充值订单失败')
+      const { rechargeOrder } = (await createRes.json()) as { rechargeOrder: { id: string } }
+
+      // Step 2: pay with x402 — Privy handles 402 → sign → retry automatically
+      const payFetch = wrapFetchWithPayment({ walletAddress: embeddedWallet.address, fetch })
+      const payRes = await payFetch(`/api/recharge-orders/${rechargeOrder.id}/pay`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${identityToken}` },
+      })
+      if (!payRes.ok) {
+        const body = (await payRes.json()) as { error?: string }
+        throw new Error(body.error ?? '支付失败')
+      }
+
+      setRechargeStatus('success')
+      void refetch()
+      void refreshSession()
+    } catch (err) {
+      setRechargeStatus('error')
+      setRechargeError(err instanceof Error ? err.message : '支付失败，请重试')
+    }
+  }
+
+  const closeModal = () => {
+    setShowRechargeModal(false)
+    setSelectedOption(null)
+    setRechargeStatus('idle')
+    setRechargeError(null)
+  }
 
   const chartData = useMemo(() => data?.usage?.[activeRange] ?? [], [activeRange, data])
   const chartCredits = useMemo(() => chartData.reduce((sum, item) => sum + item.credits, 0), [chartData])
   const displayIdentity = resolveDisplayIdentity(user, authIdentity, isAuthenticated)
+
   const paymentRows =
     activePaymentTab === 'recharge'
       ? (data?.rechargeOrders ?? []).map((order) => [
@@ -77,6 +135,53 @@ export default function BillingPage() {
 
   return (
     <div className="page-stack page-stack--billing">
+      {showRechargeModal && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-box__header">
+              <h3>充值积分</h3>
+              <button type="button" onClick={closeModal} aria-label="关闭"><X size={16} /></button>
+            </div>
+            {rechargeStatus === 'success' ? (
+              <div className="modal-box__success">
+                <p>充值成功！积分已到账。</p>
+                <PrimaryButton onClick={closeModal}>关闭</PrimaryButton>
+              </div>
+            ) : (
+              <>
+                <p className="modal-box__desc">选择充值金额，使用钱包中的 USDC 完成支付。</p>
+                <div className="recharge-options">
+                  {RECHARGE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.credits}
+                      type="button"
+                      className={`recharge-option${selectedOption?.credits === opt.credits ? ' is-selected' : ''}`}
+                      onClick={() => setSelectedOption(opt)}
+                    >
+                      <strong>{opt.credits.toLocaleString()} 积分</strong>
+                      <span>${opt.amountUsd} USDC</span>
+                    </button>
+                  ))}
+                </div>
+                {rechargeError && <p className="modal-box__error">{rechargeError}</p>}
+                {!embeddedWallet && (
+                  <p className="modal-box__error">未检测到 Privy 内嵌钱包，请先在账户中创建钱包。</p>
+                )}
+                <div className="modal-box__actions">
+                  <SecondaryButton onClick={closeModal}>取消</SecondaryButton>
+                  <PrimaryButton
+                    onClick={() => void handleRecharge()}
+                    disabled={!selectedOption || !embeddedWallet || rechargeStatus === 'loading'}
+                  >
+                    {rechargeStatus === 'loading' ? '支付中...' : '确认支付'}
+                  </PrimaryButton>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid-three billing-top-grid">
         <Panel className="profile-card billing-profile-card">
           <span className="profile-card__label">我的资料</span>
@@ -160,6 +265,9 @@ export default function BillingPage() {
           ))}
         </div>
 
+        <div className="billing-table-actions">
+          <PrimaryButton onClick={() => setShowRechargeModal(true)}>充值积分</PrimaryButton>
+        </div>
         <TableShell
           columns={['订单 ID', '状态', '积分', '金额', '代币', '创建时间', '操作']}
           rows={paymentRows}
