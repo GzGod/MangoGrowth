@@ -2319,3 +2319,199 @@ textarea {
     padding: 14px;
   }
 }
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-box__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-box__header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-box__header button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.modal-box__header button:hover {
+  background: var(--surface-hover);
+}
+
+.modal-box__desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.modal-box__error {
+  font-size: 13px;
+  color: var(--color-error, #e53e3e);
+  margin: 0;
+}
+
+.modal-box__success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  text-align: center;
+}
+
+.modal-box__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.modal-box__cancel-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.modal-box__cancel-btn:hover {
+  background: var(--surface-hover);
+}
+
+.modal-box__confirm-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--text-primary);
+  color: var(--surface);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.modal-box__confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-box__close-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* ── Recharge options grid ── */
+.recharge-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.recharge-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.recharge-option strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.recharge-option span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.recharge-option:hover {
+  border-color: var(--text-primary);
+}
+
+.recharge-option.is-selected {
+  border-color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+/* ── Billing table actions ── */
+.billing-table-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+/* ── Admin plan form ── */
+.admin-plan-form {
+  padding: 16px;
+  background: var(--surface-hover);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.admin-create-grid--plans {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.field--checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.field--checkbox input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.admin-plan-actions {
+  display: flex;
+  gap: 6px;
+}
+
