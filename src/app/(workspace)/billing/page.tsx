@@ -51,6 +51,7 @@ export default function BillingPage() {
   const [activePaymentTab, setActivePaymentTab] = useState<PaymentTab>('recharge')
 
   const chartData = useMemo(() => data?.usage?.[activeRange] ?? [], [activeRange, data])
+  const chartCredits = useMemo(() => chartData.reduce((sum, item) => sum + item.credits, 0), [chartData])
   const displayIdentity = resolveDisplayIdentity(user, authIdentity, isAuthenticated)
   const paymentRows =
     activePaymentTab === 'recharge'
@@ -117,7 +118,7 @@ export default function BillingPage() {
         <div className="chart-card__header">
           <div>
             <h3>使用量</h3>
-            <p>(1,000 Credits)</p>
+            <p>({chartCredits.toLocaleString()} Credits)</p>
           </div>
           <div className="chart-card__ranges">
             {usageRanges.map((range) => (

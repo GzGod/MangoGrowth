@@ -54,6 +54,7 @@ export default function DashboardPage() {
   const [activeRange, setActiveRange] = useState<UsageRangeKey>('last7')
 
   const chartData = useMemo(() => data?.usage?.[activeRange] ?? [], [activeRange, data])
+  const chartCredits = useMemo(() => chartData.reduce((sum, item) => sum + item.credits, 0), [chartData])
 
   return (
     <div className="page-stack page-stack--dashboard">
@@ -127,7 +128,7 @@ export default function DashboardPage() {
         <div className="chart-card__header">
           <div>
             <h3>使用量</h3>
-            <p>(1,000 Credits)</p>
+            <p>({chartCredits.toLocaleString()} Credits)</p>
           </div>
           <div className="chart-card__ranges">
             {usageRanges.map((range) => (
