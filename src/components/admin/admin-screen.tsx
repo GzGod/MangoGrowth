@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, ChevronUp, ShieldCheck, ShieldPlus, Users } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil, Plus, ShieldCheck, ShieldPlus, Trash2, Users } from 'lucide-react'
 import { useState } from 'react'
 
 import { useAdminApiQuery } from '@/hooks/use-admin-api-query'
@@ -75,6 +75,24 @@ type AdminAccountsResponse = {
   }>
 }
 
+type AdminPlan = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  category: string
+  priceUsd: number
+  creditsCost: number | null
+  durationDays: number | null
+  isFeatured: boolean
+  isActive: boolean
+  features: string[]
+}
+
+type AdminPlansResponse = {
+  plans: AdminPlan[]
+}
+
 async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -93,7 +111,134 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+const PLAN_CATEGORIES = ['SERVICE_PLAN', 'SUBSCRIPTION_PLAN', 'CREDIT_PACK'] as const
+
 const ORDER_STATUSES = ['PENDING', 'PAID', 'ACTIVE', 'COMPLETED', 'CANCELED'] as const
+
+const EMPTY_PLAN_FORM = {
+  slug: '',
+  name: '',
+  description: '',
+  category: 'SERVICE_PLAN' as string,
+  priceUsd: 0,
+  creditsCost: 0,
+  durationDays: '',
+  isFeatured: false,
+  features: '',
+}
+
+function PlanFormPanel({
+  initial,
+  onSave,
+  onCancel,
+}: {
+  initial?: AdminPlan
+  onSave: () => Promise<void>
+  onCancel: () => void
+}) {
+  const [form, setForm] = useState(
+    initial
+      ? {
+          slug: initial.slug,
+          name: initial.name,
+          description: initial.description,
+          category: initial.category,
+          priceUsd: initial.priceUsd,
+          creditsCost: initial.creditsCost ?? 0,
+          durationDays: initial.durationDays ? String(initial.durationDays) : '',
+          isFeatured: initial.isFeatured,
+          features: initial.features.join('\n'),
+        }
+      : EMPTY_PLAN_FORM,
+  )
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const set = (key: string, value: string | number | boolean) =>
+    setForm((f) => ({ ...f, [key]: value }))
+
+  const handleSubmit = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      const body = {
+        slug: form.slug,
+        name: form.name,
+        description: form.description,
+        category: form.category,
+        priceUsd: Number(form.priceUsd),
+        creditsCost: Number(form.creditsCost),
+        durationDays: form.durationDays ? Number(form.durationDays) : undefined,
+        isFeatured: form.isFeatured,
+        features: form.features.split('\n').map((s) => s.trim()).filter(Boolean),
+      }
+      if (initial) {
+        await adminFetch(`/api/admin/plans/${initial.id}`, { method: 'PATCH', body: JSON.stringify(body) })
+      } else {
+        await adminFetch('/api/admin/plans', { method: 'POST', body: JSON.stringify(body) })
+      }
+      await onSave()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="admin-plan-form">
+      <div className="admin-create-grid admin-create-grid--plans">
+        <label className="field">
+          <span>Slug（唯一标识）</span>
+          <input value={form.slug} onChange={(e) => set('slug', e.target.value)} placeholder="例如 trial-pack" disabled={!!initial} />
+        </label>
+        <label className="field">
+          <span>套餐名称</span>
+          <input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="例如 体验包 (Trial)" />
+        </label>
+        <label className="field">
+          <span>类型</span>
+          <select value={form.category} onChange={(e) => set('category', e.target.value)}>
+            {PLAN_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span>价格 (USD)</span>
+          <input type="number" min={0} value={form.priceUsd} onChange={(e) => set('priceUsd', e.target.value)} />
+        </label>
+        <label className="field">
+          <span>积分消耗</span>
+          <input type="number" min={0} value={form.creditsCost} onChange={(e) => set('creditsCost', e.target.value)} />
+        </label>
+        <label className="field">
+          <span>有效天数（订阅填 30，一次性留空）</span>
+          <input type="number" min={1} value={form.durationDays} onChange={(e) => set('durationDays', e.target.value)} placeholder="留空表示永久" />
+        </label>
+        <label className="field field--checkbox">
+          <input type="checkbox" checked={form.isFeatured} onChange={(e) => set('isFeatured', e.target.checked)} />
+          <span>热门推荐（isFeatured）</span>
+        </label>
+      </div>
+      <label className="field">
+        <span>描述</span>
+        <textarea value={form.description} onChange={(e) => set('description', e.target.value)} rows={2} placeholder="套餐描述文字" />
+      </label>
+      <label className="field">
+        <span>服务量列表（每行一条，例如：关注 50）</span>
+        <textarea value={form.features} onChange={(e) => set('features', e.target.value)} rows={5} placeholder={'关注 50\n点赞 20\n转发 10\n评论 5\n收藏 5'} />
+      </label>
+      {error && <p className="field-error">{error}</p>}
+      <div className="modal-box__actions">
+        <SecondaryButton onClick={onCancel}>取消</SecondaryButton>
+        <PrimaryButton onClick={() => void handleSubmit()} disabled={saving}>
+          {saving ? '保存中...' : initial ? '保存修改' : '创建套餐'}
+        </PrimaryButton>
+      </div>
+    </div>
+  )
+}
+
+
 
 function OrderDetailRow({
   order,
@@ -226,6 +371,7 @@ export function AdminScreen({
   const { data: rechargeData } = useAdminApiQuery<AdminRechargeOrdersResponse>('/api/admin/recharge-orders', true)
   const { data: tasksData } = useAdminApiQuery<AdminTasksResponse>('/api/admin/tasks', true)
   const { data: adminAccountsData, refetch: refetchAdminAccounts } = useAdminApiQuery<AdminAccountsResponse>('/api/admin/admin-users', true)
+  const { data: plansData, refetch: refetchPlans } = useAdminApiQuery<AdminPlansResponse>('/api/admin/plans', true)
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -233,6 +379,8 @@ export function AdminScreen({
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
+  const [showPlanForm, setShowPlanForm] = useState(false)
+  const [editingPlan, setEditingPlan] = useState<AdminPlan | null>(null)
 
   const handleCreateAdmin = async () => {
     setIsSubmitting(true)
@@ -263,6 +411,15 @@ export function AdminScreen({
   const orders = ordersData?.orders ?? []
   const rechargeOrders = rechargeData?.rechargeOrders ?? []
   const tasks = tasksData?.tasks ?? []
+  const plans = plansData?.plans ?? []
+
+  const handleTogglePlanActive = async (plan: AdminPlan) => {
+    await adminFetch(`/api/admin/plans/${plan.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive: !plan.isActive }),
+    })
+    await refetchPlans()
+  }
 
   const ORDER_COLUMNS = ['订单 ID', '下单用户', '订单名称', '状态', '积分消耗', '金额', '创建时间', '']
 
@@ -430,6 +587,82 @@ export function AdminScreen({
             </tbody>
           </table>
         </div>
+      </Panel>
+
+      <Panel className="admin-panel admin-panel--table">
+        <div className="panel-heading admin-panel__heading admin-panel__heading--table">
+          <div>
+            <h3>套餐管理</h3>
+            <p>上架、编辑或下架服务套餐与订阅套餐。</p>
+          </div>
+          <PrimaryButton onClick={() => { setEditingPlan(null); setShowPlanForm(true) }}>
+            <Plus size={14} /> 新建套餐
+          </PrimaryButton>
+        </div>
+
+        {(showPlanForm && !editingPlan) && (
+          <PlanFormPanel
+            onSave={async () => { await refetchPlans(); setShowPlanForm(false) }}
+            onCancel={() => setShowPlanForm(false)}
+          />
+        )}
+
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>类型</th>
+              <th>价格</th>
+              <th>积分消耗</th>
+              <th>热门</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {plans.length === 0 ? (
+              <tr><td colSpan={7} className="table-empty">暂无套餐数据。</td></tr>
+            ) : plans.map((plan) => (
+              <>
+                <tr key={plan.id}>
+                  <td>{plan.name}</td>
+                  <td><StatusPill>{plan.category}</StatusPill></td>
+                  <td>${plan.priceUsd}</td>
+                  <td>{plan.creditsCost?.toLocaleString() ?? '-'}</td>
+                  <td>{plan.isFeatured ? '✓' : '-'}</td>
+                  <td><StatusPill>{plan.isActive ? 'ACTIVE' : 'INACTIVE'}</StatusPill></td>
+                  <td className="admin-plan-actions">
+                    <button
+                      className="secondary-button secondary-button--icon"
+                      aria-label="编辑"
+                      onClick={() => { setEditingPlan(plan); setShowPlanForm(true) }}
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      className="secondary-button secondary-button--icon"
+                      aria-label={plan.isActive ? '下架' : '上架'}
+                      onClick={() => void handleTogglePlanActive(plan)}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </td>
+                </tr>
+                {editingPlan?.id === plan.id && showPlanForm && (
+                  <tr key={`${plan.id}-edit`}>
+                    <td colSpan={7} className="order-detail-cell">
+                      <PlanFormPanel
+                        initial={editingPlan}
+                        onSave={async () => { await refetchPlans(); setShowPlanForm(false); setEditingPlan(null) }}
+                        onCancel={() => { setShowPlanForm(false); setEditingPlan(null) }}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </>
+            ))}
+          </tbody>
+        </table>
       </Panel>
 
       <Panel className="admin-panel admin-panel--table">
