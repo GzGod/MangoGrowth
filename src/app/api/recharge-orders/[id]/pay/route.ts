@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withX402 } from 'x402-next'
 
 import { createRechargeSettlement } from '@/lib/billing/accounting'
-import { requireSessionUser, routeErrorResponse } from '@/lib/auth/request'
+import { requireSessionUser } from '@/lib/auth/request'
 import { db } from '@/lib/db'
 import { serializeRechargeOrder } from '@/lib/server/serializers'
 
@@ -65,7 +65,8 @@ async function payHandler(request: NextRequest, context: Context): Promise<NextR
 
     return NextResponse.json({ rechargeOrder: serializeRechargeOrder(updatedOrder) })
   } catch (error) {
-    return routeErrorResponse(error)
+    const message = error instanceof Error ? error.message : 'Internal Server Error'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
