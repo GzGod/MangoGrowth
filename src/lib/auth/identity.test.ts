@@ -31,6 +31,22 @@ describe('extractPrivyIdentity', () => {
       walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
     })
   })
+
+  it('reads oauth email from top-level server-auth identities', () => {
+    const identity = extractPrivyIdentity({
+      google: {
+        email: 'top-level-admin@example.com',
+      },
+      wallet: {
+        address: '0x1234567890abcdef1234567890abcdef12345678',
+      },
+    })
+
+    expect(identity).toEqual({
+      email: 'top-level-admin@example.com',
+      walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
+    })
+  })
 })
 
 describe('resolveDisplayIdentity', () => {
