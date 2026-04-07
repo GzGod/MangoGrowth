@@ -35,7 +35,7 @@ const RATE_LIMIT_RULES: Array<[string, string, number]> = [
   ['/api/admin/auth/login', 'POST', 5],
 ]
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const method = request.method
   const ip = getClientIp(request)
