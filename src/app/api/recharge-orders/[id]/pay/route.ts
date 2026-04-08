@@ -19,7 +19,13 @@ const CDP_API_KEY_ID = process.env.CDP_API_KEY_ID
 const CDP_API_KEY_SECRET = process.env.CDP_API_KEY_SECRET
 
 async function createCdpAuthHeaders() {
-  if (!CDP_API_KEY_ID || !CDP_API_KEY_SECRET) return undefined
+  if (!CDP_API_KEY_ID || !CDP_API_KEY_SECRET) {
+    return {
+      verify: {} as Record<string, string>,
+      settle: {} as Record<string, string>,
+      supported: {} as Record<string, string>,
+    }
+  }
   const verifyJwt = await generateJwt({
     apiKeyId: CDP_API_KEY_ID,
     apiKeySecret: CDP_API_KEY_SECRET,
@@ -34,9 +40,17 @@ async function createCdpAuthHeaders() {
     requestHost: 'api.cdp.coinbase.com',
     requestPath: '/platform/v2/x402/settle',
   })
+  const supportedJwt = await generateJwt({
+    apiKeyId: CDP_API_KEY_ID,
+    apiKeySecret: CDP_API_KEY_SECRET,
+    requestMethod: 'GET',
+    requestHost: 'api.cdp.coinbase.com',
+    requestPath: '/platform/v2/x402/supported',
+  })
   return {
-    verify: { Authorization: `Bearer ${verifyJwt}` },
-    settle: { Authorization: `Bearer ${settleJwt}` },
+    verify: { Authorization: `Bearer ${verifyJwt}` } as Record<string, string>,
+    settle: { Authorization: `Bearer ${settleJwt}` } as Record<string, string>,
+    supported: { Authorization: `Bearer ${supportedJwt}` } as Record<string, string>,
   }
 }
 
