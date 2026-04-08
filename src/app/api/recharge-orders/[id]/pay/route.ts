@@ -120,14 +120,14 @@ async function payHandler(request: NextRequest): Promise<NextResponse> {
 export const POST = withX402(
   payHandler as (request: NextRequest) => Promise<NextResponse>,
   PAYMENT_ADDRESS,
-  async (req: NextRequest) => {
-    const id = req.nextUrl.pathname.split('/').at(-2) ?? ''
-    const order = await db.rechargeOrder.findFirst({ where: { id } })
-    const priceUsd = order?.amountUsd ?? 1
+  async (_req: NextRequest) => {
+    // Use a fixed placeholder price here — the real order amount is validated
+    // inside payHandler after authentication. Querying the DB here would leak
+    // order existence and amount to unauthenticated callers who only know the ID.
     return {
-      price: `$${(priceUsd / 100).toFixed(2)}` as `$${number}`,
+      price: '$0.01' as `$${number}`,
       network: NETWORK,
-      config: { description: `MangoGrowth 充值 $${(priceUsd / 100).toFixed(2)}` },
+      config: { description: 'MangoGrowth 充值' },
     }
   },
   {

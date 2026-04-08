@@ -12,6 +12,11 @@ function getClientIp(request: NextRequest): string {
   )
 }
 
+// Paths that use a global (instance-level) rate limit key instead of IP-based.
+// This prevents attackers from bypassing limits by spoofing x-forwarded-for / x-real-ip.
+// Admin login is the primary target: low legitimate traffic, high brute-force risk.
+const GLOBAL_RATE_LIMIT_PATHS = new Set(['/api/admin/auth/login'])
+
 function isRateLimited(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now()
   const entry = rateLimitStore.get(key)
@@ -51,7 +56,9 @@ export function proxy(request: NextRequest) {
   // Rate limiting for API routes
   for (const [path, limitMethod, limit] of RATE_LIMIT_RULES) {
     if (pathname === path && method === limitMethod) {
-      const key = `${ip}:${path}:${method}`
+      const key = GLOBAL_RATE_LIMIT_PATHS.has(path)
+        ? `global:${path}:${method}`
+        : `${ip}:${path}:${method}`
       if (isRateLimited(key, limit, 60_000)) {
         return new NextResponse(JSON.stringify({ error: '请求过于频繁，请稍后再试' }), {
           status: 429,

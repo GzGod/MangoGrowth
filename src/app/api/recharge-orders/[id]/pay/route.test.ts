@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { dbMock, txMock, requireSessionUserMock, balanceMock } = vi.hoisted(() => {
+const { dbMock, txMock, requireSessionUserMock, balanceMock, x402Mock } = vi.hoisted(() => {
   const txMock = {
     rechargeOrder: { updateMany: vi.fn(), findUniqueOrThrow: vi.fn() },
     transaction: { create: vi.fn() },
@@ -12,16 +12,22 @@ const { dbMock, txMock, requireSessionUserMock, balanceMock } = vi.hoisted(() =>
   }
   const requireSessionUserMock = vi.fn()
   const balanceMock = { adjustBalanceReturning: vi.fn() }
-  return { dbMock, txMock, requireSessionUserMock, balanceMock }
+  let capturedRouteConfig: ((req: NextRequest) => Promise<unknown>) | null = null
+  const x402Mock = {
+    get capturedRouteConfig() { return capturedRouteConfig },
+    withX402: vi.fn((handler: (req: Request) => Promise<Response>, _addr: unknown, routeConfig: (req: NextRequest) => Promise<unknown>) => {
+      capturedRouteConfig = routeConfig
+      return handler
+    }),
+  }
+  return { dbMock, txMock, requireSessionUserMock, balanceMock, x402Mock }
 })
 
 vi.mock('@/lib/db', () => ({ db: dbMock }))
 vi.mock('@/lib/auth/request', () => ({ requireSessionUser: requireSessionUserMock }))
 vi.mock('@/lib/server/serializers', () => ({ serializeRechargeOrder: vi.fn((o) => o) }))
 vi.mock('@coinbase/cdp-sdk/auth', () => ({ generateJwt: vi.fn().mockResolvedValue('jwt') }))
-vi.mock('x402-next', () => ({
-  withX402: vi.fn((handler: (req: Request) => Promise<Response>) => handler),
-}))
+vi.mock('x402-next', () => ({ withX402: x402Mock.withX402 }))
 vi.mock('@/lib/db/balance', () => ({
   adjustBalanceReturning: balanceMock.adjustBalanceReturning,
 }))
@@ -120,5 +126,20 @@ describe('POST /api/recharge-orders/[id]/pay', () => {
     await POST(makeRequest())
     const [, , delta] = balanceMock.adjustBalanceReturning.mock.calls[0] as [unknown, unknown, number]
     expect(delta).toBe(mockPendingOrder.amountUsd)
+  })
+})
+
+describe('routeConfig (x402 payment requirements)', () => {
+  it('does not query the database — no pre-auth order info leak', async () => {
+    expect(x402Mock.capturedRouteConfig).not.toBeNull()
+    vi.clearAllMocks()
+    await x402Mock.capturedRouteConfig!(makeRequest('rorder_1'))
+    expect(dbMock.rechargeOrder.findFirst).not.toHaveBeenCalled()
+  })
+
+  it('returns a fixed placeholder price regardless of order ID', async () => {
+    expect(x402Mock.capturedRouteConfig).not.toBeNull()
+    const result = await x402Mock.capturedRouteConfig!(makeRequest('rorder_1')) as { price: string }
+    expect(result.price).toBe('$0.01')
   })
 })

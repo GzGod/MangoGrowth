@@ -50,5 +50,5 @@ export function getAdminPassword() {
 }
 
 export function getAdminSessionSecret() {
-  return process.env.ADMIN_SESSION_SECRET?.trim() || getPrivyAppSecret()
+  return requireEnv('ADMIN_SESSION_SECRET', process.env.ADMIN_SESSION_SECRET)
 }
