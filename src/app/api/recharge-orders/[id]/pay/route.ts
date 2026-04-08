@@ -1,6 +1,7 @@
 import type { Prisma } from '@/generated/prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 import { withX402 } from 'x402-next'
+import { generateJwt } from '@coinbase/cdp-sdk/auth'
 
 import { createRechargeSettlement } from '@/lib/billing/accounting'
 import { requireSessionUser } from '@/lib/auth/request'
@@ -13,7 +14,31 @@ type Context = {
 
 const PAYMENT_ADDRESS = (process.env.X402_PAYMENT_ADDRESS ?? '0x0000000000000000000000000000000000000000') as `0x${string}`
 const NETWORK = (process.env.X402_NETWORK ?? 'base-sepolia') as 'base' | 'base-sepolia'
-const FACILITATOR_URL = process.env.X402_FACILITATOR_URL
+const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? 'https://api.cdp.coinbase.com/platform/v2/x402'
+const CDP_API_KEY_ID = process.env.CDP_API_KEY_ID
+const CDP_API_KEY_SECRET = process.env.CDP_API_KEY_SECRET
+
+async function createCdpAuthHeaders() {
+  if (!CDP_API_KEY_ID || !CDP_API_KEY_SECRET) return undefined
+  const verifyJwt = await generateJwt({
+    apiKeyId: CDP_API_KEY_ID,
+    apiKeySecret: CDP_API_KEY_SECRET,
+    requestMethod: 'POST',
+    requestHost: 'api.cdp.coinbase.com',
+    requestPath: '/platform/v2/x402/verify',
+  })
+  const settleJwt = await generateJwt({
+    apiKeyId: CDP_API_KEY_ID,
+    apiKeySecret: CDP_API_KEY_SECRET,
+    requestMethod: 'POST',
+    requestHost: 'api.cdp.coinbase.com',
+    requestPath: '/platform/v2/x402/settle',
+  })
+  return {
+    verify: { Authorization: `Bearer ${verifyJwt}` },
+    settle: { Authorization: `Bearer ${settleJwt}` },
+  }
+}
 
 async function payHandler(request: NextRequest, context: Context): Promise<NextResponse> {
   try {
@@ -82,5 +107,8 @@ export const POST = withX402(
       config: { description: `MangoGrowth 充值 $${(priceUsd / 100).toFixed(2)}` },
     }
   },
-  FACILITATOR_URL ? { url: FACILITATOR_URL as `${string}://${string}` } : undefined,
+  {
+    url: FACILITATOR_URL as `${string}://${string}`,
+    createAuthHeaders: createCdpAuthHeaders,
+  },
 )
