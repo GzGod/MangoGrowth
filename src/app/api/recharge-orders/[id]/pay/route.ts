@@ -79,9 +79,13 @@ async function payHandler(request: NextRequest): Promise<NextResponse> {
     })
 
     const updatedOrder = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Idempotency: re-check status inside transaction to prevent double-credit
-      const lockedOrder = await tx.rechargeOrder.findUnique({ where: { id: rechargeOrder.id } })
-      if (!lockedOrder || lockedOrder.status !== 'PENDING') {
+      // Atomic status transition: only succeeds if status is still PENDING.
+      // Concurrent requests will find status already PAID and get count=0.
+      const transitioned = await tx.rechargeOrder.updateMany({
+        where: { id: rechargeOrder.id, status: 'PENDING' },
+        data: { status: 'PAID', paidAt: new Date(), provider: 'x402' },
+      })
+      if (transitioned.count === 0) {
         throw new Error('Recharge order is not pending')
       }
 
@@ -101,10 +105,7 @@ async function payHandler(request: NextRequest): Promise<NextResponse> {
         },
       })
 
-      return tx.rechargeOrder.update({
-        where: { id: rechargeOrder.id },
-        data: { status: 'PAID', paidAt: new Date(), provider: 'x402' },
-      })
+      return tx.rechargeOrder.findUniqueOrThrow({ where: { id: rechargeOrder.id } })
     })
 
     return NextResponse.json({ rechargeOrder: serializeRechargeOrder(updatedOrder) })

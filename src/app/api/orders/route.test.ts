@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { dbMock, txMock, requireSessionUserMock } = vi.hoisted(() => {
   const txMock = {
-    user: { findUnique: vi.fn(), update: vi.fn() },
+    user: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     transaction: { create: vi.fn() },
     order: { create: vi.fn() },
     subscription: { create: vi.fn() },
@@ -77,6 +77,7 @@ describe('POST /api/orders', () => {
     requireSessionUserMock.mockResolvedValue(mockUser)
     txMock.user.findUnique.mockResolvedValue({ usdBalance: mockUser.usdBalance })
     txMock.user.update.mockResolvedValue({})
+    txMock.user.updateMany.mockResolvedValue({ count: 1 })
     txMock.transaction.create.mockResolvedValue({})
     txMock.order.create.mockResolvedValue({ ...mockPlan, id: 'order_1', plan: mockPlan })
     txMock.serviceTask.create.mockResolvedValue({})
@@ -101,18 +102,32 @@ describe('POST /api/orders', () => {
 
   it('rejects when balance is insufficient inside transaction', async () => {
     dbMock.plan.findUnique.mockResolvedValue(mockPlan)
-    txMock.user.findUnique.mockResolvedValue({ usdBalance: 0 })
+    txMock.user.updateMany.mockResolvedValue({ count: 0 })
     const res = await POST(makeRequest({ planSlug: 'trial-pack' }))
     expect(res.status).toBe(400)
     const body = await res.json() as { error: string }
     expect(body.error).toBe('Insufficient balance')
   })
 
-  it('uses atomic decrement (not absolute write) for balance', async () => {
+  it('uses atomic conditional decrement (updateMany with gte guard)', async () => {
     dbMock.plan.findUnique.mockResolvedValue(mockPlan)
+    txMock.user.updateMany = vi.fn().mockResolvedValue({ count: 1 })
     const res = await POST(makeRequest({ planSlug: 'trial-pack' }))
     expect(res.status).toBe(201)
-    const updateCall = txMock.user.update.mock.calls[0][0] as { data: { usdBalance: unknown } }
-    expect(updateCall.data.usdBalance).toEqual({ decrement: mockPlan.usdCost })
+    const call = txMock.user.updateMany.mock.calls[0][0] as {
+      where: { id: string; usdBalance: { gte: number } }
+      data: { usdBalance: unknown }
+    }
+    expect(call.where.usdBalance).toEqual({ gte: mockPlan.usdCost })
+    expect(call.data.usdBalance).toEqual({ decrement: mockPlan.usdCost })
+  })
+
+  it('rejects when atomic decrement finds no matching row (concurrent overdraft)', async () => {
+    dbMock.plan.findUnique.mockResolvedValue(mockPlan)
+    txMock.user.updateMany = vi.fn().mockResolvedValue({ count: 0 })
+    const res = await POST(makeRequest({ planSlug: 'trial-pack' }))
+    expect(res.status).toBe(400)
+    const body = await res.json() as { error: string }
+    expect(body.error).toBe('Insufficient balance')
   })
 })

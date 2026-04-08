@@ -66,21 +66,21 @@ export async function POST(request: Request) {
     })
 
     const order = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Re-read balance inside transaction and verify sufficiency (prevents lost-update race)
-      const freshUser = await tx.user.findUnique({ where: { id: user.id }, select: { usdBalance: true } })
-      if (!freshUser || freshUser.usdBalance < usdCost) {
-        throw new Error('Insufficient balance')
-      }
-      await tx.user.update({
-        where: { id: user.id },
+      // Atomic conditional decrement: only succeeds if balance >= cost.
+      // This is concurrency-safe — no lost-update race possible.
+      const updated = await tx.user.updateMany({
+        where: { id: user.id, usdBalance: { gte: usdCost } },
         data: { usdBalance: { decrement: usdCost } },
       })
+      if (updated.count === 0) {
+        throw new Error('Insufficient balance')
+      }
 
       await tx.transaction.create({
         data: {
           userId: user.id,
           amount: -usdCost,
-          balanceAfter: freshUser.usdBalance - usdCost,
+          balanceAfter: user.usdBalance - usdCost,
           type: 'PURCHASE',
           description: settlement.transaction.description,
           referenceId: settlement.order.id,

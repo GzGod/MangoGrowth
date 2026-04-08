@@ -33,8 +33,9 @@ export async function PATCH(request: NextRequest, context: Context) {
     })
     return NextResponse.json({ plan: serializePlan(plan) })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    if (error instanceof Response) return error
+    console.error('[admin/plans PATCH]', error)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
 
@@ -48,7 +49,8 @@ export async function DELETE(_request: NextRequest, context: Context) {
     })
     return NextResponse.json({ ok: true })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    if (error instanceof Response) return error
+    console.error('[admin/plans DELETE]', error)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

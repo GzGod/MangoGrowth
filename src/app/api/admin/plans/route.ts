@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
     })
     return NextResponse.json({ plans: plans.map(serializePlan) })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unauthorized'
-    return NextResponse.json({ error: message }, { status: 401 })
+    if (error instanceof Response) return error
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 }
 
@@ -54,7 +54,8 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json({ plan: serializePlan(plan) }, { status: 201 })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    if (error instanceof Response) return error
+    console.error('[admin/plans POST]', error)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

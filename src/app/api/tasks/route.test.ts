@@ -31,7 +31,6 @@ const mockUser = {
   name: null,
   avatarUrl: null,
 }
-const mockOrder = { id: 'order_1', userId: 'user_1', status: 'ACTIVE' }
 
 function makeRequest(body: unknown) {
   return new Request('http://localhost/api/tasks', {
@@ -47,42 +46,30 @@ describe('POST /api/tasks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     requireSessionUserMock.mockResolvedValue(mockUser)
-    dbMock.serviceTask.create.mockResolvedValue({ id: 'task_1', ...validBody, status: 'QUEUED' })
   })
 
-  it('rejects when orderId is missing', async () => {
+  it('returns 403 for any authenticated user (manual creation disabled)', async () => {
+    const res = await POST(makeRequest(validBody))
+    expect(res.status).toBe(403)
+    const body = await res.json() as { error: string }
+    expect(body.error).toMatch(/automatically/)
+  })
+
+  it('returns 403 even without orderId (no bypass possible)', async () => {
     const res = await POST(makeRequest({ type: 'FOLLOW', targetAccount: '@test' }))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(403)
   })
 
-  it('rejects when order does not belong to user', async () => {
-    dbMock.order.findFirst.mockResolvedValue(null)
-    const res = await POST(makeRequest(validBody))
-    expect(res.status).toBe(404)
-    const body = await res.json() as { error: string }
-    expect(body.error).toBe('Order not found')
-  })
-
-  it('rejects when order is not ACTIVE', async () => {
-    dbMock.order.findFirst.mockResolvedValue({ ...mockOrder, status: 'COMPLETED' })
-    const res = await POST(makeRequest(validBody))
-    expect(res.status).toBe(400)
-    const body = await res.json() as { error: string }
-    expect(body.error).toBe('Order is not active')
-  })
-
-  it('creates task when order is valid and ACTIVE', async () => {
-    dbMock.order.findFirst.mockResolvedValue(mockOrder)
-    const res = await POST(makeRequest(validBody))
-    expect(res.status).toBe(201)
-    expect(dbMock.serviceTask.create).toHaveBeenCalledOnce()
-  })
-
-  it('passes orderId ownership check (userId filter)', async () => {
-    dbMock.order.findFirst.mockResolvedValue(mockOrder)
+  it('never creates a task record', async () => {
     await POST(makeRequest(validBody))
-    const findCall = dbMock.order.findFirst.mock.calls[0][0] as { where: { id: string; userId: string } }
-    expect(findCall.where.userId).toBe(mockUser.id)
-    expect(findCall.where.id).toBe('order_1')
+    expect(dbMock.serviceTask.create).not.toHaveBeenCalled()
+  })
+
+  it('propagates auth errors via routeErrorResponse', async () => {
+    requireSessionUserMock.mockRejectedValue(new Error('auth failed'))
+    const res = await POST(makeRequest(validBody))
+    // routeErrorResponse mock returns 500 for non-Response errors
+    expect(res.status).toBe(500)
+    expect(dbMock.serviceTask.create).not.toHaveBeenCalled()
   })
 })

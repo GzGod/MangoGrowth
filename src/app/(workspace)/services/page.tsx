@@ -167,36 +167,9 @@ export default function ServicesPage() {
     selectedConfigs.length > 0 &&
     selectedConfigs.every(({ draft }) => draft.target.trim() && Number(draft.quantity) > 0)
 
+  // Task submission is disabled — tasks are auto-created on order purchase.
   const submitTasks = async () => {
-    if (!identityToken || !canSubmit) return
-    setIsSubmitting(true)
-
-    try {
-      for (const { config, draft } of selectedConfigs) {
-        const speed = speedOptions.find((option) => option.key === draft.speed) ?? speedOptions[0]
-        await apiFetch('/api/tasks', identityToken, {
-          method: 'POST',
-          body: JSON.stringify({
-            type: config.type,
-            targetAccount: draft.target,
-            targetPostUrl: config.usesUrl ? draft.target : null,
-            note: `数量：${draft.quantity}；速度：${speed.title}；单价：${speed.price} 积分`,
-          }),
-        })
-      }
-
-      setSelectedTypes([])
-      setDrafts({
-        FOLLOW: initialDraft(),
-        LIKE: initialDraft(),
-        REPOST: initialDraft(),
-        COMMENT: initialDraft(),
-        BOOKMARK: initialDraft(),
-        QUOTE: initialDraft(),
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
+    return
   }
 
   return (
@@ -340,10 +313,10 @@ export default function ServicesPage() {
             </div>
 
             <div className="services-summary-bar__actions">
-              {!canSubmit ? <span className="services-summary-bar__warning">请填写输入内容</span> : null}
-              <PrimaryButton onClick={() => void submitTasks()} disabled={isSubmitting || !canSubmit}>
+              <span className="services-summary-bar__warning">购买套餐后任务将自动创建</span>
+              <PrimaryButton disabled>
                 <Plus size={16} />
-                {isSubmitting ? '创建中...' : '创建服务'}
+                创建服务
               </PrimaryButton>
             </div>
           </Panel>
