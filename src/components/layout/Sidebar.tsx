@@ -143,9 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     : (selectedOption?.amountUsd ?? 0)
 
   const handleRecharge = async () => {
-    console.log('[recharge] called', { identityToken: !!identityToken, activeWallet: activeWallet?.address, effectiveAmountUsd })
     if (!identityToken || !activeWallet || effectiveAmountUsd <= 0) {
-      console.log('[recharge] early return', { identityToken: !!identityToken, activeWallet: !!activeWallet, effectiveAmountUsd })
       if (!activeWallet) setRechargeError('请先连接钱包')
       return
     }
