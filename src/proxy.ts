@@ -12,10 +12,16 @@ function getClientIp(request: NextRequest): string {
   )
 }
 
-// Paths that use a global (instance-level) rate limit key instead of IP-based.
+// All rate-limited API paths use a global (instance-level) key instead of IP-based.
 // This prevents attackers from bypassing limits by spoofing x-forwarded-for / x-real-ip.
-// Admin login is the primary target: low legitimate traffic, high brute-force risk.
-const GLOBAL_RATE_LIMIT_PATHS = new Set(['/api/admin/auth/login'])
+// These routes are all authenticated, so the real protection is auth; rate limiting
+// here is a secondary defence against abuse — a global bucket is simpler and reliable.
+const GLOBAL_RATE_LIMIT_PATHS = new Set([
+  '/api/admin/auth/login',
+  '/api/recharge-orders',
+  '/api/orders',
+  '/api/tasks',
+])
 
 function isRateLimited(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now()

@@ -130,15 +130,39 @@ describe('POST /api/recharge-orders/[id]/pay', () => {
 })
 
 describe('routeConfig (x402 payment requirements)', () => {
-  it('does not query the database — no pre-auth order info leak', async () => {
-    expect(x402Mock.capturedRouteConfig).not.toBeNull()
+  beforeEach(() => {
     vi.clearAllMocks()
-    await x402Mock.capturedRouteConfig!(makeRequest('rorder_1'))
+    requireSessionUserMock.mockResolvedValue(mockUser)
+    dbMock.rechargeOrder.findFirst.mockResolvedValue(mockPendingOrder)
+  })
+
+  it('requires authentication — unauthenticated callers cannot learn order amount', async () => {
+    requireSessionUserMock.mockRejectedValue(new Response('Unauthorized', { status: 401 }))
+    await expect(x402Mock.capturedRouteConfig!(makeRequest('rorder_1'))).rejects.toBeInstanceOf(Response)
     expect(dbMock.rechargeOrder.findFirst).not.toHaveBeenCalled()
   })
 
-  it('returns a fixed placeholder price regardless of order ID', async () => {
-    expect(x402Mock.capturedRouteConfig).not.toBeNull()
+  it('returns the real order amount so payment equals credit', async () => {
+    const result = await x402Mock.capturedRouteConfig!(makeRequest('rorder_1')) as { price: string }
+    // amountUsd=1000 cents → $10.00
+    expect(result.price).toBe('$10.00')
+  })
+
+  it('queries order with userId to prevent cross-user probing', async () => {
+    await x402Mock.capturedRouteConfig!(makeRequest('rorder_1'))
+    expect(dbMock.rechargeOrder.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ userId: mockUser.id }) }),
+    )
+  })
+
+  it('returns sentinel price when order is not found (handler will reject before crediting)', async () => {
+    dbMock.rechargeOrder.findFirst.mockResolvedValue(null)
+    const result = await x402Mock.capturedRouteConfig!(makeRequest('rorder_1')) as { price: string }
+    expect(result.price).toBe('$0.01')
+  })
+
+  it('returns sentinel price when order is already PAID (handler will reject before crediting)', async () => {
+    dbMock.rechargeOrder.findFirst.mockResolvedValue({ ...mockPendingOrder, status: 'PAID' })
     const result = await x402Mock.capturedRouteConfig!(makeRequest('rorder_1')) as { price: string }
     expect(result.price).toBe('$0.01')
   })

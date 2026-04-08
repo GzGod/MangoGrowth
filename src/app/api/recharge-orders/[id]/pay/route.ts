@@ -120,14 +120,30 @@ async function payHandler(request: NextRequest): Promise<NextResponse> {
 export const POST = withX402(
   payHandler as (request: NextRequest) => Promise<NextResponse>,
   PAYMENT_ADDRESS,
-  async (_req: NextRequest) => {
-    // Use a fixed placeholder price here — the real order amount is validated
-    // inside payHandler after authentication. Querying the DB here would leak
-    // order existence and amount to unauthenticated callers who only know the ID.
+  async (req: NextRequest) => {
+    // Authenticate before revealing any order details.
+    // requireSessionUser throws a Response on failure, which withX402 will surface
+    // as a 401/403 — the caller never learns whether the order exists or its amount.
+    const user = await requireSessionUser(req)
+    const id = req.nextUrl.pathname.split('/').at(-2) ?? ''
+    const order = await db.rechargeOrder.findFirst({
+      where: { id, userId: user.id },
+    })
+    if (!order || order.status !== 'PENDING') {
+      // Return a sentinel that causes withX402 to surface a 402 with a harmless
+      // placeholder; the handler will reject with 404/400 on the follow-up call.
+      // We must return a valid price shape — use $0.01 only as a dead-end sentinel
+      // for orders that are already gone/paid (handler will reject before crediting).
+      return {
+        price: '$0.01' as `$${number}`,
+        network: NETWORK,
+        config: { description: 'MangoGrowth 充值' },
+      }
+    }
     return {
-      price: '$0.01' as `$${number}`,
+      price: `$${(order.amountUsd / 100).toFixed(2)}` as `$${number}`,
       network: NETWORK,
-      config: { description: 'MangoGrowth 充值' },
+      config: { description: `MangoGrowth 充值 $${(order.amountUsd / 100).toFixed(2)}` },
     }
   },
   {
