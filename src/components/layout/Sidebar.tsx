@@ -165,10 +165,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       if (!createRes.ok) throw new Error('创建充值订单失败')
       const { rechargeOrder } = (await createRes.json()) as { rechargeOrder: { id: string } }
 
-      // 2. Hit pay endpoint to get 402 + payment requirements
+      // 2. Hit pay endpoint to get 402 + payment requirements (Accept: application/json avoids HTML paywall)
       const probeRes = await fetch(`/api/recharge-orders/${rechargeOrder.id}/pay`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${identityToken}` },
+        headers: { Authorization: `Bearer ${identityToken}`, Accept: 'application/json' },
       })
       if (probeRes.status !== 402) {
         if (probeRes.ok) { setRechargeStatus('success'); void refreshSession(); return }
