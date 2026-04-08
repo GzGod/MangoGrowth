@@ -54,10 +54,10 @@ async function createCdpAuthHeaders() {
   }
 }
 
-async function payHandler(request: NextRequest, context: Context): Promise<NextResponse> {
+async function payHandler(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireSessionUser(request)
-    const { id } = await context.params
+    const id = request.nextUrl.pathname.split('/').at(-2) ?? ''
 
     const rechargeOrder = await db.rechargeOrder.findFirst({
       where: { id, userId: user.id },
