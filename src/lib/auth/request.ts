@@ -3,24 +3,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getBootstrapAdminEmails } from '@/lib/env'
 import { isBootstrapAdmin, parseBootstrapAdminEmails } from '@/lib/auth/admin'
-import { extractPrivyEmail, extractPrivyWalletAddress } from '@/lib/auth/identity'
 import { getPrivyClient } from '@/lib/privy'
-
-type PrivyLinkedAccount = {
-  type?: string
-  address?: string
-  email?: string
-  subject?: string
-}
-
-type PrivyUserShape = {
-  id: string
-  email?: { address?: string | null } | null
-  linkedAccounts?: PrivyLinkedAccount[]
-  linked_accounts?: PrivyLinkedAccount[]
-  customMetadata?: Record<string, unknown> | null
-  custom_metadata?: Record<string, unknown> | null
-}
 
 export type SessionUser = {
   id: string
@@ -42,17 +25,6 @@ function extractIdentityToken(request: Request) {
   return request.headers.get('x-privy-token')
 }
 
-function extractName(privyUser: PrivyUserShape) {
-  const metadata = privyUser.customMetadata ?? privyUser.custom_metadata ?? {}
-  const nameValue = metadata.name
-  return typeof nameValue === 'string' && nameValue.trim().length > 0 ? nameValue.trim() : null
-}
-
-function extractAvatarUrl(privyUser: PrivyUserShape) {
-  const metadata = privyUser.customMetadata ?? privyUser.custom_metadata ?? {}
-  const avatarUrl = metadata.avatarUrl ?? metadata.avatar_url
-  return typeof avatarUrl === 'string' && avatarUrl.trim().length > 0 ? avatarUrl.trim() : null
-}
 
 export async function requireSessionUser(request: Request): Promise<SessionUser> {
   const identityToken = extractIdentityToken(request)
@@ -61,26 +33,20 @@ export async function requireSessionUser(request: Request): Promise<SessionUser>
     throw new Response('Unauthorized', { status: 401 })
   }
 
-  const privyUser = (await getPrivyClient().getUser({ idToken: identityToken })) as unknown as PrivyUserShape
-  const email = extractPrivyEmail(privyUser)
-  const walletAddress = extractPrivyWalletAddress(privyUser)
+  const claims = await getPrivyClient().verifyAuthToken(identityToken)
+  const privyUserId = claims.userId
+
   const bootstrapAdminEmails = parseBootstrapAdminEmails(getBootstrapAdminEmails())
-  const role: 'USER' | 'ADMIN' = isBootstrapAdmin(email, bootstrapAdminEmails) ? 'ADMIN' : 'USER'
 
   const user = await db.user.upsert({
-    where: { privyUserId: privyUser.id },
-    update: {
-      email,
-      name: extractName(privyUser),
-      avatarUrl: extractAvatarUrl(privyUser),
-      role,
-    },
+    where: { privyUserId },
+    update: {},
     create: {
-      privyUserId: privyUser.id,
-      email,
-      name: extractName(privyUser),
-      avatarUrl: extractAvatarUrl(privyUser),
-      role,
+      privyUserId,
+      email: null,
+      name: null,
+      avatarUrl: null,
+      role: 'USER',
     },
     select: {
       id: true,
@@ -93,9 +59,15 @@ export async function requireSessionUser(request: Request): Promise<SessionUser>
     },
   })
 
+  const role: 'USER' | 'ADMIN' = isBootstrapAdmin(user.email, bootstrapAdminEmails) ? 'ADMIN' : 'USER'
+  if (role !== user.role) {
+    await db.user.update({ where: { id: user.id }, data: { role } })
+  }
+
   return {
     ...user,
-    walletAddress,
+    role,
+    walletAddress: null,
   }
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useIdentityToken, usePrivy } from '@privy-io/react-auth'
+import { usePrivy } from '@privy-io/react-auth'
 import { createContext, useContext, useEffect, useState } from 'react'
 
 import { apiFetch } from '@/lib/client/api'
@@ -35,19 +35,18 @@ type SessionContextValue = {
 const SessionContext = createContext<SessionContextValue | null>(null)
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const { ready, authenticated, login, logout, user: privyUser } = usePrivy()
-  const { identityToken } = useIdentityToken()
+  const { ready, authenticated, login, logout, user: privyUser, getAccessToken } = usePrivy()
+  const [identityToken, setIdentityToken] = useState<string | null>(null)
   const [user, setUser] = useState<LocalUser | null>(null)
   const [isSessionLoading, setIsSessionLoading] = useState(true)
   const authIdentity = extractPrivyIdentity(privyUser)
 
   const refreshSession = async () => {
-    if (!ready) {
-      return
-    }
+    if (!ready) return
 
-    if (!authenticated || !identityToken) {
+    if (!authenticated) {
       setUser(null)
+      setIdentityToken(null)
       setIsSessionLoading(false)
       return
     }
@@ -55,14 +54,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setIsSessionLoading(true)
 
     try {
-      await apiFetch<{ user: LocalUser }>('/api/auth/sync', identityToken, {
-        method: 'POST',
-      })
+      const token = await getAccessToken()
+      if (!token) throw new Error('No access token')
+      setIdentityToken(token)
 
-      const session = await apiFetch<{ user: LocalUser }>('/api/auth/me', identityToken)
+      await apiFetch<{ user: LocalUser }>('/api/auth/sync', token, { method: 'POST' })
+      const session = await apiFetch<{ user: LocalUser }>('/api/auth/me', token)
       setUser(session.user)
     } catch {
       setUser(null)
+      setIdentityToken(null)
     } finally {
       setIsSessionLoading(false)
     }
@@ -70,12 +71,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const sync = async () => {
-      if (!ready) {
-        return
-      }
+      if (!ready) return
 
-      if (!authenticated || !identityToken) {
+      if (!authenticated) {
         setUser(null)
+        setIdentityToken(null)
         setIsSessionLoading(false)
         return
       }
@@ -83,21 +83,23 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setIsSessionLoading(true)
 
       try {
-        await apiFetch<{ user: LocalUser }>('/api/auth/sync', identityToken, {
-          method: 'POST',
-        })
+        const token = await getAccessToken()
+        if (!token) throw new Error('No access token')
+        setIdentityToken(token)
 
-        const session = await apiFetch<{ user: LocalUser }>('/api/auth/me', identityToken)
+        await apiFetch<{ user: LocalUser }>('/api/auth/sync', token, { method: 'POST' })
+        const session = await apiFetch<{ user: LocalUser }>('/api/auth/me', token)
         setUser(session.user)
       } catch {
         setUser(null)
+        setIdentityToken(null)
       } finally {
         setIsSessionLoading(false)
       }
     }
 
     void sync()
-  }, [authenticated, identityToken, ready])
+  }, [authenticated, ready])
 
   const value: SessionContextValue = {
     identityToken,
