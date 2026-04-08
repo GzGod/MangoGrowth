@@ -144,12 +144,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     : (selectedOption?.amountUsd ?? 0)
 
   const handleRecharge = async () => {
-    if (!identityToken) {
-      setRechargeError('请先退出并重新登录以完成身份验证')
-      return
-    }
     if (!activeWallet) {
       setRechargeError('请先连接钱包')
+      return
+    }
+    if (!identityToken) {
+      setRechargeError('请先退出并重新登录以完成身份验证')
       return
     }
     if (effectiveAmountUsd <= 0) return
