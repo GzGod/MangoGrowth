@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { dbMock, txMock, requireSessionUserMock } = vi.hoisted(() => {
+const { dbMock, txMock, requireSessionUserMock, balanceMock } = vi.hoisted(() => {
   const txMock = {
     rechargeOrder: { updateMany: vi.fn(), findUniqueOrThrow: vi.fn() },
-    user: { update: vi.fn(), findUniqueOrThrow: vi.fn() },
     transaction: { create: vi.fn() },
   }
   const dbMock = {
@@ -12,24 +11,21 @@ const { dbMock, txMock, requireSessionUserMock } = vi.hoisted(() => {
     $transaction: vi.fn(),
   }
   const requireSessionUserMock = vi.fn()
-  return { dbMock, txMock, requireSessionUserMock }
+  const balanceMock = { adjustBalanceReturning: vi.fn() }
+  return { dbMock, txMock, requireSessionUserMock, balanceMock }
 })
 
 vi.mock('@/lib/db', () => ({ db: dbMock }))
-vi.mock('@/lib/auth/request', () => ({
-  requireSessionUser: requireSessionUserMock,
-}))
-vi.mock('@/lib/server/serializers', () => ({
-  serializeRechargeOrder: vi.fn((o) => o),
-}))
+vi.mock('@/lib/auth/request', () => ({ requireSessionUser: requireSessionUserMock }))
+vi.mock('@/lib/server/serializers', () => ({ serializeRechargeOrder: vi.fn((o) => o) }))
 vi.mock('@coinbase/cdp-sdk/auth', () => ({ generateJwt: vi.fn().mockResolvedValue('jwt') }))
 vi.mock('x402-next', () => ({
-  withX402: vi.fn(
-    (handler: (req: Request) => Promise<Response>) => handler,
-  ),
+  withX402: vi.fn((handler: (req: Request) => Promise<Response>) => handler),
+}))
+vi.mock('@/lib/db/balance', () => ({
+  adjustBalanceReturning: balanceMock.adjustBalanceReturning,
 }))
 
-// Import after mocks
 import { POST } from './route'
 
 const mockUser = {
@@ -64,8 +60,7 @@ describe('POST /api/recharge-orders/[id]/pay', () => {
     dbMock.rechargeOrder.findFirst.mockResolvedValue(mockPendingOrder)
     txMock.rechargeOrder.updateMany.mockResolvedValue({ count: 1 })
     txMock.rechargeOrder.findUniqueOrThrow.mockResolvedValue({ ...mockPendingOrder, status: 'PAID' })
-    txMock.user.update.mockResolvedValue({})
-    txMock.user.findUniqueOrThrow.mockResolvedValue({ usdBalance: 6000 })
+    balanceMock.adjustBalanceReturning.mockResolvedValue(6000)
     txMock.transaction.create.mockResolvedValue({})
     dbMock.$transaction.mockImplementation(
       (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock),
@@ -76,7 +71,7 @@ describe('POST /api/recharge-orders/[id]/pay', () => {
     const res = await POST(makeRequest())
     expect(res.status).toBe(200)
     expect(txMock.rechargeOrder.updateMany).toHaveBeenCalledOnce()
-    expect(txMock.user.update).toHaveBeenCalledOnce()
+    expect(balanceMock.adjustBalanceReturning).toHaveBeenCalledOnce()
     expect(txMock.transaction.create).toHaveBeenCalledOnce()
   })
 
@@ -84,7 +79,7 @@ describe('POST /api/recharge-orders/[id]/pay', () => {
     dbMock.rechargeOrder.findFirst.mockResolvedValue(null)
     const res = await POST(makeRequest())
     expect(res.status).toBe(404)
-    expect(txMock.user.update).not.toHaveBeenCalled()
+    expect(balanceMock.adjustBalanceReturning).not.toHaveBeenCalled()
   })
 
   it('rejects when order is already PAID (pre-tx check)', async () => {
@@ -97,14 +92,13 @@ describe('POST /api/recharge-orders/[id]/pay', () => {
   })
 
   it('rejects when atomic status transition fails (concurrent duplicate)', async () => {
-    // Simulates second concurrent request: updateMany finds no PENDING row
     txMock.rechargeOrder.updateMany.mockResolvedValue({ count: 0 })
     const res = await POST(makeRequest())
     expect(res.status).toBe(400)
     const body = await res.json() as { error: string }
     expect(body.error).toBe('Recharge order is not pending')
-    // Balance must NOT have been incremented
-    expect(txMock.user.update).not.toHaveBeenCalled()
+    // Balance must NOT have been touched
+    expect(balanceMock.adjustBalanceReturning).not.toHaveBeenCalled()
     expect(txMock.transaction.create).not.toHaveBeenCalled()
   })
 
@@ -114,12 +108,17 @@ describe('POST /api/recharge-orders/[id]/pay', () => {
     expect(txMock.transaction.create).not.toHaveBeenCalled()
   })
 
-  it('writes exact balanceAfter from post-update re-read', async () => {
-    txMock.user.findUniqueOrThrow.mockResolvedValue({ usdBalance: 6000 })
+  it('writes balanceAfter from the atomic RETURNING value, not a separate query', async () => {
+    const atomicBalance = 6000
+    balanceMock.adjustBalanceReturning.mockResolvedValue(atomicBalance)
     await POST(makeRequest())
-    const txCreate = txMock.transaction.create.mock.calls[0][0] as {
-      data: { balanceAfter: number }
-    }
-    expect(txCreate.data.balanceAfter).toBe(6000)
+    const txCreate = txMock.transaction.create.mock.calls[0][0] as { data: { balanceAfter: number } }
+    expect(txCreate.data.balanceAfter).toBe(atomicBalance)
+  })
+
+  it('calls adjustBalanceReturning with the correct amount', async () => {
+    await POST(makeRequest())
+    const [, , delta] = balanceMock.adjustBalanceReturning.mock.calls[0] as [unknown, unknown, number]
+    expect(delta).toBe(mockPendingOrder.amountUsd)
   })
 })

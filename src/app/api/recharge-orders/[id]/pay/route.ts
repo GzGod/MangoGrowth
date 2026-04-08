@@ -6,6 +6,7 @@ import { generateJwt } from '@coinbase/cdp-sdk/auth'
 import { createRechargeSettlement } from '@/lib/billing/accounting'
 import { requireSessionUser } from '@/lib/auth/request'
 import { db } from '@/lib/db'
+import { adjustBalanceReturning } from '@/lib/db/balance'
 import { serializeRechargeOrder } from '@/lib/server/serializers'
 
 type Context = {
@@ -89,16 +90,9 @@ async function payHandler(request: NextRequest): Promise<NextResponse> {
         throw new Error('Recharge order is not pending')
       }
 
-      await tx.user.update({
-        where: { id: user.id },
-        data: { usdBalance: { increment: rechargeOrder.amountUsd } },
-      })
-
-      // Re-read the committed balance so balanceAfter is exact, not a stale snapshot.
-      const { usdBalance: balanceAfter } = await tx.user.findUniqueOrThrow({
-        where: { id: user.id },
-        select: { usdBalance: true },
-      })
+      // Atomic balance increment via UPDATE...RETURNING — returns the post-update
+      // balance in one round-trip; no separate SELECT can race with it.
+      const balanceAfter = await adjustBalanceReturning(tx, user.id, rechargeOrder.amountUsd)
 
       await tx.transaction.create({
         data: {

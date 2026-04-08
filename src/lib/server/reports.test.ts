@@ -18,13 +18,13 @@ describe('buildUsageSeries', () => {
     )
 
     expect(series).toEqual([
-      { date: 'Mar 31', credits: 0 },
-      { date: 'Apr 1', credits: 0 },
-      { date: 'Apr 2', credits: 0 },
-      { date: 'Apr 3', credits: 300 },
-      { date: 'Apr 4', credits: 0 },
-      { date: 'Apr 5', credits: 0 },
-      { date: 'Apr 6', credits: 200 },
+      { date: 'Mar 31', usd: 0 },
+      { date: 'Apr 1', usd: 0 },
+      { date: 'Apr 2', usd: 0 },
+      { date: 'Apr 3', usd: 300 },
+      { date: 'Apr 4', usd: 0 },
+      { date: 'Apr 5', usd: 0 },
+      { date: 'Apr 6', usd: 200 },
     ])
   })
 })

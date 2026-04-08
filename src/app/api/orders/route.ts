@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { createPurchase } from '@/lib/billing/accounting'
 import { requireSessionUser, routeErrorResponse } from '@/lib/auth/request'
 import { db } from '@/lib/db'
+import { decrementBalanceIfSufficient } from '@/lib/db/balance'
 import { ensurePlanCatalog } from '@/lib/server/plans'
 import { serializeOrder } from '@/lib/server/serializers'
 
@@ -66,21 +67,13 @@ export async function POST(request: Request) {
     })
 
     const order = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Atomic conditional decrement: only succeeds if balance >= cost.
-      // This is concurrency-safe — no lost-update race possible.
-      const updated = await tx.user.updateMany({
-        where: { id: user.id, usdBalance: { gte: usdCost } },
-        data: { usdBalance: { decrement: usdCost } },
-      })
-      if (updated.count === 0) {
+      // Atomic conditional decrement via UPDATE...RETURNING.
+      // Returns the post-update balance in one round-trip; null means balance was insufficient.
+      // This is the only value used for balanceAfter — no separate SELECT can race with it.
+      const balanceAfter = await decrementBalanceIfSufficient(tx, user.id, usdCost)
+      if (balanceAfter === null) {
         throw new Error('Insufficient balance')
       }
-
-      // Re-read the committed balance so balanceAfter is exact, not a stale snapshot.
-      const { usdBalance: balanceAfter } = await tx.user.findUniqueOrThrow({
-        where: { id: user.id },
-        select: { usdBalance: true },
-      })
 
       await tx.transaction.create({
         data: {

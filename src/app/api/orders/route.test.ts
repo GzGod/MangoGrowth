@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { dbMock, txMock, requireSessionUserMock } = vi.hoisted(() => {
+const { dbMock, txMock, requireSessionUserMock, balanceMock } = vi.hoisted(() => {
   const txMock = {
-    user: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn() },
+    user: { findUnique: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn() },
     transaction: { create: vi.fn() },
     order: { create: vi.fn() },
     subscription: { create: vi.fn() },
@@ -14,7 +14,10 @@ const { dbMock, txMock, requireSessionUserMock } = vi.hoisted(() => {
     $transaction: vi.fn(),
   }
   const requireSessionUserMock = vi.fn()
-  return { dbMock, txMock, requireSessionUserMock }
+  const balanceMock = {
+    decrementBalanceIfSufficient: vi.fn(),
+  }
+  return { dbMock, txMock, requireSessionUserMock, balanceMock }
 })
 
 vi.mock('@/lib/db', () => ({ db: dbMock }))
@@ -27,6 +30,9 @@ vi.mock('@/lib/auth/request', () => ({
   }),
 }))
 vi.mock('@/lib/server/serializers', () => ({ serializeOrder: vi.fn((o) => o) }))
+vi.mock('@/lib/db/balance', () => ({
+  decrementBalanceIfSufficient: balanceMock.decrementBalanceIfSufficient,
+}))
 
 import { POST } from './route'
 
@@ -75,10 +81,8 @@ describe('POST /api/orders', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     requireSessionUserMock.mockResolvedValue(mockUser)
-    txMock.user.findUnique.mockResolvedValue({ usdBalance: mockUser.usdBalance })
-    txMock.user.update.mockResolvedValue({})
-    txMock.user.updateMany.mockResolvedValue({ count: 1 })
-    txMock.user.findUniqueOrThrow.mockResolvedValue({ usdBalance: mockUser.usdBalance - 900 })
+    // decrementBalanceIfSufficient returns the post-update balance (atomic RETURNING value)
+    balanceMock.decrementBalanceIfSufficient.mockResolvedValue(mockUser.usdBalance - 900)
     txMock.transaction.create.mockResolvedValue({})
     txMock.order.create.mockResolvedValue({ ...mockPlan, id: 'order_1', plan: mockPlan })
     txMock.serviceTask.create.mockResolvedValue({})
@@ -101,44 +105,32 @@ describe('POST /api/orders', () => {
     expect(body.error).toMatch(/not found or inactive/)
   })
 
-  it('rejects when balance is insufficient inside transaction', async () => {
+  it('rejects when balance is insufficient (decrementBalanceIfSufficient returns null)', async () => {
     dbMock.plan.findUnique.mockResolvedValue(mockPlan)
-    txMock.user.updateMany.mockResolvedValue({ count: 0 })
+    balanceMock.decrementBalanceIfSufficient.mockResolvedValue(null)
     const res = await POST(makeRequest({ planSlug: 'trial-pack' }))
     expect(res.status).toBe(400)
     const body = await res.json() as { error: string }
     expect(body.error).toBe('Insufficient balance')
   })
 
-  it('uses atomic conditional decrement (updateMany with gte guard)', async () => {
+  it('uses decrementBalanceIfSufficient (atomic UPDATE...RETURNING helper)', async () => {
     dbMock.plan.findUnique.mockResolvedValue(mockPlan)
     const res = await POST(makeRequest({ planSlug: 'trial-pack' }))
     expect(res.status).toBe(201)
-    const call = txMock.user.updateMany.mock.calls[0][0] as {
-      where: { id: string; usdBalance: { gte: number } }
-      data: { usdBalance: unknown }
-    }
-    expect(call.where.usdBalance).toEqual({ gte: mockPlan.usdCost })
-    expect(call.data.usdBalance).toEqual({ decrement: mockPlan.usdCost })
+    expect(balanceMock.decrementBalanceIfSufficient).toHaveBeenCalledOnce()
+    const [, , cost] = balanceMock.decrementBalanceIfSufficient.mock.calls[0] as [unknown, unknown, number]
+    expect(cost).toBe(mockPlan.usdCost)
   })
 
-  it('rejects when atomic decrement finds no matching row (concurrent overdraft)', async () => {
+  it('writes balanceAfter from the atomic RETURNING value, not a separate query', async () => {
     dbMock.plan.findUnique.mockResolvedValue(mockPlan)
-    txMock.user.updateMany.mockResolvedValue({ count: 0 })
-    const res = await POST(makeRequest({ planSlug: 'trial-pack' }))
-    expect(res.status).toBe(400)
-    const body = await res.json() as { error: string }
-    expect(body.error).toBe('Insufficient balance')
-  })
-
-  it('writes exact balanceAfter from post-update re-read', async () => {
-    dbMock.plan.findUnique.mockResolvedValue(mockPlan)
-    const expectedBalance = mockUser.usdBalance - mockPlan.usdCost
-    txMock.user.findUniqueOrThrow.mockResolvedValue({ usdBalance: expectedBalance })
+    const atomicBalance = 9100
+    balanceMock.decrementBalanceIfSufficient.mockResolvedValue(atomicBalance)
     await POST(makeRequest({ planSlug: 'trial-pack' }))
-    const txCreate = txMock.transaction.create.mock.calls[0][0] as {
-      data: { balanceAfter: number }
-    }
-    expect(txCreate.data.balanceAfter).toBe(expectedBalance)
+    const txCreate = txMock.transaction.create.mock.calls[0][0] as { data: { balanceAfter: number } }
+    expect(txCreate.data.balanceAfter).toBe(atomicBalance)
+    // Confirm no separate findUniqueOrThrow was called for balance
+    expect(txMock.user.findUniqueOrThrow).not.toHaveBeenCalled()
   })
 })
