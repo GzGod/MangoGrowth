@@ -172,8 +172,6 @@ describe('routeConfig (x402 payment requirements)', () => {
 describe('POST /api/recharge-orders/[id]/pay — unauthenticated request contract', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Simulate withX402 calling the handler directly (as our mock does)
-    // with an unauthenticated request — requireSessionUser throws
     requireSessionUserMock.mockRejectedValue(new Response('Unauthorized', { status: 401 }))
     dbMock.rechargeOrder.findFirst.mockResolvedValue(null)
     dbMock.$transaction.mockImplementation(
@@ -181,11 +179,9 @@ describe('POST /api/recharge-orders/[id]/pay — unauthenticated request contrac
     )
   })
 
-  it('returns 500 (not a balance credit) when handler receives an unauthenticated request', async () => {
-    // The handler's catch block converts the thrown Response to a 500 JSON response.
-    // Crucially: no balance adjustment and no transaction record are created.
+  it('returns 401 (not 500) when handler receives an unauthenticated request', async () => {
     const res = await POST(makeRequest())
-    expect(res.status).toBe(500)
+    expect(res.status).toBe(401)
     expect(balanceMock.adjustBalanceReturning).not.toHaveBeenCalled()
     expect(txMock.transaction.create).not.toHaveBeenCalled()
   })

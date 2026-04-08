@@ -110,6 +110,9 @@ async function payHandler(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ rechargeOrder: serializeRechargeOrder(updatedOrder) })
   } catch (error) {
+    if (error instanceof Response) {
+      return error as unknown as NextResponse
+    }
     if (error instanceof Error && error.message === 'Recharge order is not pending') {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
