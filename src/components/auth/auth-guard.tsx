@@ -32,8 +32,12 @@ export function AuthGuard({
     }
   }, [isAuthenticated, isReady, router])
 
-  if (!isReady || isSessionLoading) {
-    return <GuardCard title="正在同步账户信息" description="Privy 登录状态已就绪后，我们会自动加载你的业务数据。" />
+  if (!isReady || (isSessionLoading && !user)) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
+      </div>
+    )
   }
 
   if (!isAuthenticated) {
