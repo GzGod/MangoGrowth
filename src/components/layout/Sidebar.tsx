@@ -110,6 +110,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const activeWallet = wallets.find((w) => w.walletClientType !== 'privy') ?? wallets.find((w) => w.walletClientType === 'privy')
 
+  // Auto-prompt wallet connection when recharge modal opens and no wallet connected
+  useEffect(() => {
+    if (showRechargeModal && !activeWallet) {
+      connectWallet()
+    }
+  }, [showRechargeModal])
+
   const USDC_ADDRESS_BASE_SEPOLIA = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
   const USDC_ADDRESS_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 
