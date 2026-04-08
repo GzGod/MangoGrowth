@@ -7,6 +7,7 @@ import { requireSessionUser, routeErrorResponse } from '@/lib/auth/request'
 import { db } from '@/lib/db'
 import { decrementBalanceIfSufficient } from '@/lib/db/balance'
 import { ensurePlanCatalog } from '@/lib/server/plans'
+import { checkUserRateLimit } from '@/lib/rate-limit'
 import { serializeOrder } from '@/lib/server/serializers'
 
 const orderSchema = z.object({
@@ -35,6 +36,12 @@ export async function POST(request: Request) {
   try {
     await ensurePlanCatalog()
     const user = await requireSessionUser(request)
+
+    // Per-user rate limit: 10 purchases per minute
+    if (checkUserRateLimit(user.id, '/api/orders', 10)) {
+      return NextResponse.json({ error: '请求过于频繁，请稍后再试' }, { status: 429 })
+    }
+
     const parsed = orderSchema.safeParse(await request.json())
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })

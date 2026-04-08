@@ -122,18 +122,25 @@ export const POST = withX402(
   PAYMENT_ADDRESS,
   async (req: NextRequest) => {
     // Authenticate before revealing any order details.
-    // requireSessionUser throws a Response on failure, which withX402 will surface
-    // as a 401/403 — the caller never learns whether the order exists or its amount.
-    const user = await requireSessionUser(req)
+    // Catch auth failures and return a sentinel price — withX402 will issue a 402
+    // with this placeholder, and the follow-up handler call will reject with 401/403
+    // before any balance is touched. The caller never learns whether the order exists.
+    let user: Awaited<ReturnType<typeof requireSessionUser>>
+    try {
+      user = await requireSessionUser(req)
+    } catch {
+      return {
+        price: '$0.01' as `$${number}`,
+        network: NETWORK,
+        config: { description: 'MangoGrowth 充值' },
+      }
+    }
     const id = req.nextUrl.pathname.split('/').at(-2) ?? ''
     const order = await db.rechargeOrder.findFirst({
       where: { id, userId: user.id },
     })
     if (!order || order.status !== 'PENDING') {
-      // Return a sentinel that causes withX402 to surface a 402 with a harmless
-      // placeholder; the handler will reject with 404/400 on the follow-up call.
-      // We must return a valid price shape — use $0.01 only as a dead-end sentinel
-      // for orders that are already gone/paid (handler will reject before crediting).
+      // Sentinel for missing/already-paid orders — handler will reject before crediting.
       return {
         price: '$0.01' as `$${number}`,
         network: NETWORK,

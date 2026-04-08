@@ -136,9 +136,10 @@ describe('routeConfig (x402 payment requirements)', () => {
     dbMock.rechargeOrder.findFirst.mockResolvedValue(mockPendingOrder)
   })
 
-  it('requires authentication — unauthenticated callers cannot learn order amount', async () => {
+  it('returns sentinel price when unauthenticated — no DB query, no order info leak', async () => {
     requireSessionUserMock.mockRejectedValue(new Response('Unauthorized', { status: 401 }))
-    await expect(x402Mock.capturedRouteConfig!(makeRequest('rorder_1'))).rejects.toBeInstanceOf(Response)
+    const result = await x402Mock.capturedRouteConfig!(makeRequest('rorder_1')) as { price: string }
+    expect(result.price).toBe('$0.01')
     expect(dbMock.rechargeOrder.findFirst).not.toHaveBeenCalled()
   })
 
@@ -165,5 +166,27 @@ describe('routeConfig (x402 payment requirements)', () => {
     dbMock.rechargeOrder.findFirst.mockResolvedValue({ ...mockPendingOrder, status: 'PAID' })
     const result = await x402Mock.capturedRouteConfig!(makeRequest('rorder_1')) as { price: string }
     expect(result.price).toBe('$0.01')
+  })
+})
+
+describe('POST /api/recharge-orders/[id]/pay — unauthenticated request contract', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Simulate withX402 calling the handler directly (as our mock does)
+    // with an unauthenticated request — requireSessionUser throws
+    requireSessionUserMock.mockRejectedValue(new Response('Unauthorized', { status: 401 }))
+    dbMock.rechargeOrder.findFirst.mockResolvedValue(null)
+    dbMock.$transaction.mockImplementation(
+      (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock),
+    )
+  })
+
+  it('returns 500 (not a balance credit) when handler receives an unauthenticated request', async () => {
+    // The handler's catch block converts the thrown Response to a 500 JSON response.
+    // Crucially: no balance adjustment and no transaction record are created.
+    const res = await POST(makeRequest())
+    expect(res.status).toBe(500)
+    expect(balanceMock.adjustBalanceReturning).not.toHaveBeenCalled()
+    expect(txMock.transaction.create).not.toHaveBeenCalled()
   })
 })
