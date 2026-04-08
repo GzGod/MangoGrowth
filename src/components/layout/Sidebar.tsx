@@ -110,13 +110,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const activeWallet = wallets.find((w) => w.walletClientType !== 'privy') ?? wallets.find((w) => w.walletClientType === 'privy')
 
-  // Auto-prompt wallet connection when recharge modal opens and no wallet connected
-  useEffect(() => {
-    if (showRechargeModal && !activeWallet) {
-      connectWallet()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showRechargeModal])
 
   const USDC_ADDRESS_BASE_SEPOLIA = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
   const USDC_ADDRESS_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
@@ -536,38 +529,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
                 {rechargeError && <p className="modal-box__error">{rechargeError}</p>}
 
-                {!activeWallet ? (
-                  <div className="recharge-wallet-empty">
-                    <div className="recharge-wallet-empty__icon">
-                      <Wallet size={28} />
-                    </div>
-                    <strong>钱包未连接</strong>
-                    <span>加密货币支付需要连接钱包</span>
+                <div className="modal-box__actions">
+                  <button type="button" className="modal-box__cancel-btn" onClick={closeRechargeModal}>取消</button>
+                  {!activeWallet ? (
                     <button type="button" className="modal-box__confirm-btn" onClick={() => connectWallet()}>
                       <Wallet size={14} />
                       连接钱包
                     </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="modal-box__confirm-btn"
+                      onClick={() => void handleRecharge()}
+                      disabled={effectiveAmountUsd <= 0 || rechargeStatus === 'loading'}
+                    >
+                      {rechargeStatus === 'loading' ? '支付中...' : `确认支付 $${(effectiveAmountUsd / 100).toFixed(2)}`}
+                    </button>
+                  )}
+                </div>
+                {activeWallet && (
+                  <div className="recharge-wallet-info">
+                    <Wallet size={14} />
+                    <span>{activeWallet.address.slice(0, 6)}...{activeWallet.address.slice(-4)}</span>
+                    {usdcBalance !== null && <span className="recharge-wallet-info__balance">{usdcBalance} USDC</span>}
+                    <button type="button" className="recharge-wallet-info__disconnect" onClick={() => connectWallet()}>切换钱包</button>
                   </div>
-                ) : (
-                  <>
-                    <div className="recharge-wallet-info">
-                      <Wallet size={14} />
-                      <span>{activeWallet.address.slice(0, 6)}...{activeWallet.address.slice(-4)}</span>
-                      {usdcBalance !== null && <span className="recharge-wallet-info__balance">{usdcBalance} USDC</span>}
-                      <button type="button" className="recharge-wallet-info__disconnect" onClick={() => connectWallet()}>切换钱包</button>
-                    </div>
-                    <div className="modal-box__actions">
-                      <button type="button" className="modal-box__cancel-btn" onClick={closeRechargeModal}>取消</button>
-                      <button
-                        type="button"
-                        className="modal-box__confirm-btn"
-                        onClick={() => void handleRecharge()}
-                        disabled={effectiveAmountUsd <= 0 || rechargeStatus === 'loading'}
-                      >
-                        {rechargeStatus === 'loading' ? '支付中...' : `确认支付 $${(effectiveAmountUsd / 100).toFixed(2)}`}
-                      </button>
-                    </div>
-                  </>
                 )}
               </>
             )}
