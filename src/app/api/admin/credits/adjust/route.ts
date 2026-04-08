@@ -25,26 +25,34 @@ export async function POST(request: Request) {
 
     const amount = body.amount
 
-    const [, updatedUser] = await db.$transaction([
-      db.transaction.create({
+    const updatedUser = await db.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { usdBalance: { increment: amount } },
+      })
+
+      // Re-read committed balance so balanceAfter is exact under concurrent adjustments.
+      const { usdBalance: balanceAfter } = await tx.user.findUniqueOrThrow({
+        where: { id: user.id },
+        select: { usdBalance: true },
+      })
+
+      await tx.transaction.create({
         data: {
           userId: user.id,
           type: 'MANUAL_ADJUST',
           amount,
-          // balanceAfter is approximate here; exact value requires re-reading inside tx
-          balanceAfter: user.usdBalance + amount,
+          balanceAfter,
           description: body.reason ?? '管理员调整余额',
           metadata: {
             actorAdminId: admin.id,
             actorAdminUsername: admin.username,
           },
         },
-      }),
-      db.user.update({
-        where: { id: user.id },
-        data: { usdBalance: { increment: amount } },
-      }),
-    ])
+      })
+
+      return tx.user.findUniqueOrThrow({ where: { id: user.id } })
+    })
 
     return NextResponse.json({ user: updatedUser })
   } catch (error) {

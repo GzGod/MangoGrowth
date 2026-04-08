@@ -76,11 +76,17 @@ export async function POST(request: Request) {
         throw new Error('Insufficient balance')
       }
 
+      // Re-read the committed balance so balanceAfter is exact, not a stale snapshot.
+      const { usdBalance: balanceAfter } = await tx.user.findUniqueOrThrow({
+        where: { id: user.id },
+        select: { usdBalance: true },
+      })
+
       await tx.transaction.create({
         data: {
           userId: user.id,
           amount: -usdCost,
-          balanceAfter: user.usdBalance - usdCost,
+          balanceAfter,
           type: 'PURCHASE',
           description: settlement.transaction.description,
           referenceId: settlement.order.id,

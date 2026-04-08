@@ -94,11 +94,17 @@ async function payHandler(request: NextRequest): Promise<NextResponse> {
         data: { usdBalance: { increment: rechargeOrder.amountUsd } },
       })
 
+      // Re-read the committed balance so balanceAfter is exact, not a stale snapshot.
+      const { usdBalance: balanceAfter } = await tx.user.findUniqueOrThrow({
+        where: { id: user.id },
+        select: { usdBalance: true },
+      })
+
       await tx.transaction.create({
         data: {
           userId: user.id,
           amount: rechargeOrder.amountUsd,
-          balanceAfter: settlement.nextBalance,
+          balanceAfter,
           type: 'RECHARGE',
           description: settlement.transaction.description,
           referenceId: rechargeOrder.id,

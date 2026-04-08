@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { dbMock, txMock, requireSessionUserMock } = vi.hoisted(() => {
   const txMock = {
-    user: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+    user: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn() },
     transaction: { create: vi.fn() },
     order: { create: vi.fn() },
     subscription: { create: vi.fn() },
@@ -78,6 +78,7 @@ describe('POST /api/orders', () => {
     txMock.user.findUnique.mockResolvedValue({ usdBalance: mockUser.usdBalance })
     txMock.user.update.mockResolvedValue({})
     txMock.user.updateMany.mockResolvedValue({ count: 1 })
+    txMock.user.findUniqueOrThrow.mockResolvedValue({ usdBalance: mockUser.usdBalance - 900 })
     txMock.transaction.create.mockResolvedValue({})
     txMock.order.create.mockResolvedValue({ ...mockPlan, id: 'order_1', plan: mockPlan })
     txMock.serviceTask.create.mockResolvedValue({})
@@ -111,7 +112,6 @@ describe('POST /api/orders', () => {
 
   it('uses atomic conditional decrement (updateMany with gte guard)', async () => {
     dbMock.plan.findUnique.mockResolvedValue(mockPlan)
-    txMock.user.updateMany = vi.fn().mockResolvedValue({ count: 1 })
     const res = await POST(makeRequest({ planSlug: 'trial-pack' }))
     expect(res.status).toBe(201)
     const call = txMock.user.updateMany.mock.calls[0][0] as {
@@ -124,10 +124,21 @@ describe('POST /api/orders', () => {
 
   it('rejects when atomic decrement finds no matching row (concurrent overdraft)', async () => {
     dbMock.plan.findUnique.mockResolvedValue(mockPlan)
-    txMock.user.updateMany = vi.fn().mockResolvedValue({ count: 0 })
+    txMock.user.updateMany.mockResolvedValue({ count: 0 })
     const res = await POST(makeRequest({ planSlug: 'trial-pack' }))
     expect(res.status).toBe(400)
     const body = await res.json() as { error: string }
     expect(body.error).toBe('Insufficient balance')
+  })
+
+  it('writes exact balanceAfter from post-update re-read', async () => {
+    dbMock.plan.findUnique.mockResolvedValue(mockPlan)
+    const expectedBalance = mockUser.usdBalance - mockPlan.usdCost
+    txMock.user.findUniqueOrThrow.mockResolvedValue({ usdBalance: expectedBalance })
+    await POST(makeRequest({ planSlug: 'trial-pack' }))
+    const txCreate = txMock.transaction.create.mock.calls[0][0] as {
+      data: { balanceAfter: number }
+    }
+    expect(txCreate.data.balanceAfter).toBe(expectedBalance)
   })
 })
