@@ -29,7 +29,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useWallets, useConnectWallet } from '@privy-io/react-auth'
 import { createWalletClient, custom, publicActions } from 'viem'
 import { base, baseSepolia } from 'viem/chains'
-import { preparePaymentHeader, signPaymentHeader } from 'x402/client'
 
 import { useSession } from '@/components/providers/session-provider'
 import { resolveDisplayIdentity } from '@/lib/auth/identity'
