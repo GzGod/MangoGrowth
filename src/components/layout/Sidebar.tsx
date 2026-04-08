@@ -115,6 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (showRechargeModal && !activeWallet) {
       connectWallet()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showRechargeModal])
 
   const USDC_ADDRESS_BASE_SEPOLIA = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
