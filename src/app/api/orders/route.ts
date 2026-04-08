@@ -46,6 +46,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Plan not found or inactive' }, { status: 400 })
     }
 
+    // Block plans that require manual/enterprise sales (not self-serve purchasable)
+    const catalogEntry = (await import('@/lib/data/plan-catalog')).planCatalog.find(
+      (p) => p.slug === plan.slug,
+    )
+    if (catalogEntry && catalogEntry.purchasable === false) {
+      return NextResponse.json({ error: 'This plan requires contacting sales' }, { status: 400 })
+    }
+
     const usdCost = plan.usdCost ?? plan.priceUsd
 
     const settlement = createPurchase({
@@ -58,16 +66,21 @@ export async function POST(request: Request) {
     })
 
     const order = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Re-read balance inside transaction and verify sufficiency (prevents lost-update race)
+      const freshUser = await tx.user.findUnique({ where: { id: user.id }, select: { usdBalance: true } })
+      if (!freshUser || freshUser.usdBalance < usdCost) {
+        throw new Error('Insufficient balance')
+      }
       await tx.user.update({
         where: { id: user.id },
-        data: { usdBalance: settlement.nextBalance },
+        data: { usdBalance: { decrement: usdCost } },
       })
 
       await tx.transaction.create({
         data: {
           userId: user.id,
-          amount: settlement.transaction.amount,
-          balanceAfter: settlement.transaction.balanceAfter,
+          amount: -usdCost,
+          balanceAfter: freshUser.usdBalance - usdCost,
           type: 'PURCHASE',
           description: settlement.transaction.description,
           referenceId: settlement.order.id,

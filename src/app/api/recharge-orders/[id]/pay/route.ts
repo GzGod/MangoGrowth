@@ -79,16 +79,22 @@ async function payHandler(request: NextRequest): Promise<NextResponse> {
     })
 
     const updatedOrder = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Idempotency: re-check status inside transaction to prevent double-credit
+      const lockedOrder = await tx.rechargeOrder.findUnique({ where: { id: rechargeOrder.id } })
+      if (!lockedOrder || lockedOrder.status !== 'PENDING') {
+        throw new Error('Recharge order is not pending')
+      }
+
       await tx.user.update({
         where: { id: user.id },
-        data: { usdBalance: settlement.nextBalance },
+        data: { usdBalance: { increment: rechargeOrder.amountUsd } },
       })
 
       await tx.transaction.create({
         data: {
           userId: user.id,
-          amount: settlement.transaction.amount,
-          balanceAfter: settlement.transaction.balanceAfter,
+          amount: rechargeOrder.amountUsd,
+          balanceAfter: settlement.nextBalance,
           type: 'RECHARGE',
           description: settlement.transaction.description,
           referenceId: rechargeOrder.id,
@@ -103,8 +109,10 @@ async function payHandler(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ rechargeOrder: serializeRechargeOrder(updatedOrder) })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    if (error instanceof Error && error.message === 'Recharge order is not pending') {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
 

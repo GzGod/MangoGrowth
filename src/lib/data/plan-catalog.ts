@@ -7,6 +7,8 @@ export type PlanSeed = {
   usdCost?: number
   durationDays?: number
   isFeatured?: boolean
+  /** If false, the plan cannot be purchased directly (e.g. contact-sales / enterprise) */
+  purchasable?: boolean
   features: string[]
   meta?: Record<string, string | number | boolean>
 }
@@ -96,6 +98,7 @@ export const planCatalog: PlanSeed[] = [
     usdCost: 0,
     durationDays: 30,
     isFeatured: false,
+    purchasable: false,
     features: [],
   },
 ]

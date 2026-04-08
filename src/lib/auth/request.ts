@@ -25,7 +25,6 @@ function extractIdentityToken(request: Request) {
   return request.headers.get('x-privy-token')
 }
 
-
 export async function requireSessionUser(request: Request): Promise<SessionUser> {
   const identityToken = extractIdentityToken(request)
 
@@ -86,6 +85,15 @@ export function routeErrorResponse(error: unknown) {
     return error
   }
 
-  const message = error instanceof Error ? error.message : 'Internal Server Error'
+  // Only expose message for known business errors; swallow internal details
+  const BUSINESS_ERRORS = new Set([
+    'Insufficient balance',
+    'Recharge order is not pending',
+    'Order is not active',
+  ])
+  const message =
+    error instanceof Error && BUSINESS_ERRORS.has(error.message)
+      ? error.message
+      : 'Internal Server Error'
   return NextResponse.json({ error: message }, { status: 500 })
 }

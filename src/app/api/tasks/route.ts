@@ -9,7 +9,7 @@ const taskSchema = z.object({
   type: z.enum(['FOLLOW', 'LIKE', 'REPOST', 'COMMENT', 'BOOKMARK', 'QUOTE']),
   targetAccount: z.string().min(1).max(100),
   targetPostUrl: z.string().url().max(500).optional(),
-  orderId: z.string().optional(),
+  orderId: z.string().min(1),
   note: z.string().max(500).optional(),
 })
 
@@ -35,6 +35,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
     }
     const { type, targetAccount, targetPostUrl, orderId, note } = parsed.data
+
+    // Verify the order belongs to this user and is in a valid state
+    const order = await db.order.findFirst({
+      where: { id: orderId, userId: user.id },
+    })
+    if (!order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+    if (order.status !== 'ACTIVE' && order.status !== 'PAID') {
+      return NextResponse.json({ error: 'Order is not active' }, { status: 400 })
+    }
 
     const task = await db.serviceTask.create({
       data: {
